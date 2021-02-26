@@ -6,35 +6,55 @@
 * @note
 * TODO LIST
 * - Start menu fix (frameBuffer) -- DONE --
-* - More player sprite & animation
-* - Camera Movement
-* - Bullet logic
-* - Memory Optimization
-* - Timer for Game System
-* - Timer for FPS Optimization
-* - PFRAMEBUFFER for bitmap rendering(大本先生に聞く)
+* - More player sprite & animation -- DONE --
+* - Camera Movement -- NOT DONE --
+* - Spawn more enemies -- HALF DONE --
+* - Bullet logic -- HALF DONE --
+* - Collision -- HALF DONE --
+* - Memory Optimization -- NOT DONE --
+* - Timer for Game System -- HALF DONE --
+* - Timer for FPS Optimization -- DONE --
 */
 #include "Game.h"
+
+/* Preprocessors */
+#define NO_MOVEMENT (!InputKeyMouse(PK_A) || !InputKeyMouse(PK_D) || !InputKeyMouse(PK_W) || !InputKeyMouse(PK_S))
 
 /* Global Variables */
 char frameBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 bool gameRunning = false;
+int selectCursor;
 int stage;
 int	distance_x[5], distance_y[5];
 int KeyPush[NUM_KEY];
 int KeyEdge[NUM_KEY];
+//int icon_anim = 0;
+Point TitleT{ 36, 50 };
+Point VictoryT{ 36,40 };
+Point GameOverT{ 25, 50 };
+Point StartT{ 69, 110 };
+Point RestartT{ 68,100 };
+Point QuitT{ 83, 140 };
 
 /* Framerate settings*/
-int frame = 0;
-const int FPS = 120;
+float timer{ 0.0f };
+int frame;
+int FPSCount;
+int execLastTime;
+int currentTime;
+int fpsLastTime;
+const int FPS = 60;
 const int frameDelay = 1000 / FPS;
-UINT32 frameStart;
 
 /* Sound settings */
+const char* BGM = "bgm\\BGM.mp3";
 const char* bgm01 = "bgm\\Struggle.wav";
-const char* bgm02 = "bgm\\BGM02.mp3";
+const char* bgm02 = "bgm\\VICTORY.mp3";
+const char* bgm03 = "bgm\\GAMEOVER.wav";
+int* bgm_id = MciOpenSound(BGM);
 int* bgm01_id = MciOpenSound(bgm01);
 int* bgm02_id = MciOpenSound(bgm02);
+int* bgm03_id = MciOpenSound(bgm03);
 
 //Initialize Sound
 void InitSound(int *bgm)
@@ -49,7 +69,7 @@ void InitSound(int *bgm)
 void InitWindow()
 {
 	//Set Console Title
-	SetCaption("HEW Project REworked");
+	SetCaption("Familiar");
 
 	//Set font size settings
 	SetScreenFontSize(FONT_WIDTH, FONT_HEIGHT);
@@ -90,25 +110,21 @@ void Stage01()
 		//Player sprite render
 		player_sprite(&player, &gameCamera);
 
-		//Enemy sprite render
-		enemy_sprite(&enemy[0]);
-		enemy_sprite(&enemy[1]);
-		enemy_sprite(&enemy[2]);
-		enemy_sprite(&enemy[3]);
-		enemy_sprite(&enemy[4]);
-
-		//AI Behaviour
-		AI_Behaviour(&player, &enemy[0]);
-		AI_Behaviour(&player, &enemy[1]);
-		AI_Behaviour(&player, &enemy[2]);
-		AI_Behaviour(&player, &enemy[3]);
-		AI_Behaviour(&player, &enemy[4]);
-
-		//TODO LIST Player attack animation 
-		if (player.attacking == true)
+		//Instantiate enemy
+		for (int i = 0; i < 10; i++)
 		{
-			bullet_sprite(&player, &bullets);
+			enemy_sprite(&enemy[i]);
+			AI_Behaviour(&player, &enemy[i]);
 		}
+
+		//TODO LIST Player shoot
+		//for (int count = 0; count < 100; count++)
+		//{
+		//	if (bullets[count].enable)
+		//	{
+		//		bullet_sprite(&player, &bullets[count]);
+		//	}
+		//}
 	}
 }
 
@@ -119,11 +135,13 @@ void GameOver()
 	gameOver_render();
 }
 
+//Result 
 void Result()
 {
-
+	Result_render();
 }
 
+//Keyboard input handler for each modes
 void KeyRead()
 {
 	for (int n = 0; n < NUM_KEY; n++)
@@ -139,30 +157,23 @@ void KeyRead()
 	}
 }
 
+
 //Game loop goes here
 void MainGame()
 {
 	//Load starting game data
+	//Set stage to stage01 for debugging
+	selectCursor = 0;
+	stage = stages::startmenu;
+
 	Start();
+	InitSound(bgm01_id);
+	//timer = CountTime();
 
-	//Load BMP
-	//FileLoad(&imgFile);
-	//SetWindowBMP(imgFile, &imgFile);
-
-	//Set BGM for each stages
-	switch (stage)
-	{
-	case stages::startmenu:
-		//Initialize BGM
-		InitSound(bgm02_id);
-		break;
-	case stages::stage01:
-		//Stop BGM from startmenu
-		MciStopSound(bgm02_id);
-		//Initialize BGM
-		InitSound(bgm01_id);
-		break;
-	}
+	//Set time
+	timeBeginPeriod(1);
+	execLastTime = fpsLastTime = timeGetTime();
+	currentTime = frame = 0;
 
 	//Main Game Loop
 	while (gameRunning)
@@ -171,23 +182,72 @@ void MainGame()
 		{
 		case stages::startmenu:
 		{
+			//Input handle
+			KeyRead();
 			//Load startmenu image
 			//load_image(imgFile.pFB0, imgFile.frameBuffer);
 			Render(&StartMenu);
-			if (InputKeyMouse(VK_RETURN))
-				stage = stages::stage01;
+
+			// -- SELECTION --
+			if (KeyEdge[VK_UP])
+			{
+				selectCursor--;
+			}
+			else if (KeyEdge[VK_DOWN])
+			{
+				selectCursor++;
+			}
+			if (selectCursor < 0)
+				selectCursor = 0;
+			if (selectCursor > 1)
+				selectCursor = 1;
+
+			if (KeyEdge[VK_RETURN])
+			{
+				if (selectCursor == 0)
+				{
+					stage = stages::stage01;
+					MciStopSound(bgm01_id);
+					InitSound(bgm_id);
+				}
+				else if (selectCursor == 1)
+					gameRunning = false;
+			}
+			MciUpdateSound(bgm01_id);
 			break;
 		}
 		case stages::stage01:
 		{
-			//Checking for input
-			Input(&player);
+			currentTime = timeGetTime();
+			if ((currentTime - fpsLastTime) >= 500)
+			{
+				FPSCount = frame * 1000 / (currentTime - fpsLastTime);
+				fpsLastTime = currentTime;
+				frame = 0;
+			}
+			if (currentTime - execLastTime >= frameDelay)
+			{
+				//For framerate
+				execLastTime = currentTime;
 
-			//Update event handler
-			Update(&player, &enemy[0], &gameCamera);
+				//Checking for input
+				Input(&player);
 
-			//Render game graphics
-			Render(&Stage01);
+				//Update event handler
+				Update(&player, &enemy[0], &gameCamera);
+
+				//Render game graphics
+				Render(&Stage01);
+			}
+			frame++;
+
+			//Update Sound
+			MciUpdateSound(bgm_id);
+
+#ifdef _DEBUG
+			DisplayFPS();
+#endif // _DEBUG
+
 			break;
 		}
 		case stages::bossStage:
@@ -197,13 +257,78 @@ void MainGame()
 		}
 		case stages::victory:
 		{
-			//TODO List
+			KeyRead();
+			Render(&Result);
+
+			// -- SELECTION --
+			if (KeyEdge[VK_UP])
+			{
+				selectCursor--;
+			}
+			else if (KeyEdge[VK_DOWN])
+			{
+				selectCursor++;
+			}
+			if (selectCursor < 0)
+				selectCursor = 0;
+			if (selectCursor > 1)
+				selectCursor = 1;
+
+			if (KeyEdge[VK_RETURN])
+			{
+				if (selectCursor == 0)
+				{
+					Start();
+					MciStopSound(bgm02_id);
+					InitSound(bgm_id);
+					stage = stages::stage01;
+				}
+				else if (selectCursor == 1)
+					gameRunning = false;
+			}
+			break;
+		}
+		case stages::defeat:
+		{
+			//InitSound(bgm03_id);
+			KeyRead();
+			Render(&GameOver);
+
+			// -- SELECTION --
+			if (KeyEdge[VK_UP])
+			{
+				selectCursor--;
+			}
+			else if (KeyEdge[VK_DOWN])
+			{
+				selectCursor++;
+			}
+			if (selectCursor < 0)
+				selectCursor = 0;
+			if (selectCursor > 1)
+				selectCursor = 1;
+
+			if (KeyEdge[VK_RETURN])
+			{
+				if (selectCursor == 0)
+				{
+					Start();
+					MciStopSound(bgm03_id);
+					InitSound(bgm_id);
+					stage = stages::stage01;
+				}
+				else if (selectCursor == 1)
+					gameRunning = false;
+			}
 			break;
 		}
 		default:
 			break;
 		}
 	}
+
+	//End time 
+	timeEndPeriod(1);
 }
 
 //Handles all the data for initialization
@@ -217,24 +342,34 @@ void Start()
 
 	//Set game state to running 
 	gameRunning = true;
-
-	//Set stage to stage01 for debugging
-	stage = stages::startmenu;
+	timer = 50.0f;
+	icon_anim = 0;
+	player.moving = false;
+	player.attacking = false;
+	player.direction = FRONT;
+	player.HP = 5;
 
 	//Starting position set to center
 	player.position.x = 100;
 	player.position.y = 100;
 
 	//Set player height & width
-	player.imageHeight = 36;
-	player.imageWidth = 20;
+	player.imageHeight = 26;
+	player.imageWidth = 16;
 
-	//Set bullet position to player center
-	bullets.position.x = 0;
-	bullets.position.y = 0;
+	//InitBullet 
+	for (int x = 0; x < 100; x++)
+	{
+		bullets[x].position.x = 0;
+		bullets[x].position.y = 0;
+		bullets[x].prevPos.x = 0;
+		bullets[x].prevPos.y = 0;
+		bullets[x].move.x = 0;
+		bullets[x].move.y = 0;
+	}
 
 	//Set enemy sprite attributes
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		//Starting position for enemy
 		enemy[i].position.x = (rand() % 200) + 1;
@@ -258,6 +393,8 @@ void Start()
 void Input(chara* player)
 {
 	//Reading keyboard input
+	//- KeyPush -- read pressed and hold keyboard input
+	//- KeyEdge -- read pressed keyboard input once only
 	KeyRead();
 
 	//Game state check
@@ -269,45 +406,87 @@ void Input(chara* player)
 	//Player movement
 	if (KeyPush[PK_A])
 	{
-		player->position.x -= 4;
+		player->position.x -= 2;
 		player->moving = true;
 		player->direction = LEFT;
 	}
 
 	if (KeyPush[PK_D])
 	{
-		player->position.x += 4;
+		player->position.x += 2;
 		player->moving = true;
 		player->direction = RIGHT;
 	}
 
 	if (KeyPush[PK_W])
 	{
-		player->position.y -= 4;
+		player->position.y -= 2;
 		player->moving = true;
+		player->direction = BACK;
 	}
 
 	if (KeyPush[PK_S])
 	{
-		player->position.y += 4;
+		player->position.y += 2;
 		player->moving = true;
+		player->direction = FRONT;
 	}
-
-	//If nothing is pressed then set moving to false
-	if (!InputKeyMouse)
+	
+	if NO_MOVEMENT
 	{
-		player->moving = false;
+		if (player->moving)
+		{
+			player->moving = false;
+			player->anim++;
+		}
+		else if (!player->moving)
+			player->anim = IDLE;
 	}
 
-	//Attack
+
+	//Instantiate Bullet
 	if (KeyEdge[VK_SPACE])
 	{
-		player->attacking = true;
-
+		if (!player->attacking)
+		{
+			player->attacking = true;
+			for (int x = 0; x < 100; x++)
+				bullets[x].enable = true;
+			
+			if (player->direction == RIGHT)
+			{
+				InitBullet(player->position.x + player->prevPos.x + 2,
+					player->prevPos.y,
+					2, 0);
+			}
+			else if (player->direction == LEFT)
+			{
+				InitBullet(player->position.x + player->prevPos.x - 2,
+					player->prevPos.y,
+					2, 0);
+			}
+			else if (player->direction == BACK)
+			{
+				InitBullet(player->prevPos.x,
+					player->prevPos.y - 2,
+					2, 0);
+			}
+			else
+			{
+				InitBullet(player->prevPos.x,
+					player->prevPos.y + 2,
+					2, 0);
+			}
+			
+		}
 	}
 	else
 	{
-		player->attacking = false;
+		if (player->attacking)
+		{
+			player->moving = false;
+			player->attacking = false;
+		}
 	}
 
 	//---------------------------------------------------------------------
@@ -316,15 +495,18 @@ void Input(chara* player)
 //Game event update handler & State machine
 void Update(chara *player, chara* enemy, object *camera)
 {
+	//Update player prev position for bullet instance
+	player->prevPos = player->position;
+
 	//Clamp player position within the border
 	if (player->position.x < 0)
 	{
 		player->position.x = 0;
 	}
 	//Right side border
-	if (player->position.x > (SCREEN_WIDTH - player->imageWidth))
+	if (player->position.x > (VIEWPORT_W - player->imageWidth))
 	{
-		player->position.x = SCREEN_WIDTH - player->imageWidth;
+		player->position.x = VIEWPORT_W - player->imageWidth;
 	}
 	//Upper side border
 	if (player->position.y < 0)
@@ -333,43 +515,70 @@ void Update(chara *player, chara* enemy, object *camera)
 	}
 
 	//Lower side border
-	if (player->position.y > (SCREEN_HEIGHT - player->imageHeight))
+	if (player->position.y > (VIEWPORT_H - player->imageHeight))
 	{
-		player->position.y = SCREEN_HEIGHT - player->imageHeight;
+		player->position.y = VIEWPORT_H - player->imageHeight;
 	}
 
-	//-------------------------------------------------------------
+
+	//----------------------------------------------------------------
 	//Player animation state
-	if (player->moving == false)
-	{
-		player->anim = IDLE;
-	}
-	else
-	{
-		player->anim++;
-	}
+	//if (player->moving == false)
+	//{
+	//	player->anim = IDLE;
+	//}
+	//else
+	//{
+	//	player->anim++;
+	//}
 	//Looping animation 
-	if (player->anim > 5)
+	if (player->anim > 3)
 	{
 		player->anim = 0;
 	}
+
+	//Health icon animation
+	icon_anim++;
+	if (icon_anim > 3)
+		icon_anim = 0;
 
 	//TODO Camera Movement
 	camera->position.x = (player->position.x + (player->imageWidth / 2)) - (camera->imageWidth / 2);
 	camera->position.y = (player->position.y + (player->imageHeight / 2)) - (camera->imageHeight / 2);
 
-	//--------------------------------------------------------------
+	//----------------------------------------------------------------
 	//Update player & enemy position for collision
 
 	//Set player center for collision
 	player->center.x = player->position.x + (player->imageWidth / 2);
 	player->center.y = player->position.y + (player->imageHeight / 2);
 
-	//Set bullet shooting position
-	bullets.position.x = player->center.x;
-	bullets.position.y = player->center.y;
 
-	for (int i = 0; i < 5; i++)
+	//Set bullet shooting position
+	for (int y = 0; y < 100; y++)
+	{ 
+		if (bullets[y].enable)
+		{
+			//Set prev position to current position
+			bullets[y].prevPos = bullets[y].position;
+
+			//Update the current position to transform movement
+			bullets[y].position = bullets[y].move;
+
+			//The bullets hit the border or solid object
+			if (bullets[y].position.x < 8 || bullets[y].position.y < 7 ||
+				bullets[y].position.x > 208 || bullets[y].position.y > 207)
+			{
+				bullets[y].enable = false;
+			}
+
+			bullet_sprite(player, &bullets[y]);
+		}
+	}
+	//bullets.position.x = player->center.x;
+	//bullets.position.y = player->center.y;
+
+	for (int i = 0; i < 10; i++)
 	{
 		//Update animation per frame
 		enemy[i].anim++;
@@ -384,37 +593,73 @@ void Update(chara *player, chara* enemy, object *camera)
 		enemy[i].center.y = enemy[i].position.y + (enemy[i].imageHeight / 2);
 
 		//Player & enemy distance
-		distance_x[i] = player->center.x - enemy[i].center.x;
-		distance_y[i] = player->center.y - enemy[i].center.y;
+		distance_x[i] = player->position.x - enemy[i].position.x;
+		distance_y[i] = player->center.y - enemy[i].position.y;
 
+		if (distance_x[i] == 0 && distance_y[i] == 0)
+		{
+			player->HP--;
+			if (player->direction == LEFT)
+				player->position.x += 5;
+			else if (player->direction == RIGHT)
+				player->position.x -= 5;
+			else if (player->direction == FRONT)
+				player->position.y -= 5;
+			else
+				player->position.y += 5;
+		}
 		//TODO LIST distance for collision detection
-		if (distance_x[i] < 0)
-			distance_x[i] *= -1;
-		if (distance_y[i] < 0)
-			distance_y[i] *= -1;
+		//if (distance_x[i] < 0)
+		//	distance_x[i] *= -1;
+		//if (distance_y[i] < 0)
+		//	distance_y[i] *= -1;
+		//
+		//if (distance_x[i] <= 0 && distance_y[i] <= 0)
+		//	player->collided = 1;
+	}
 
-		if (distance_x[i] <= 0 && distance_y[i] <= 0)
-			player->collided = 1;
+#ifdef _DEBUG
+	//timer -= 0.1f;
+#endif // _DEBUG
+
+	if (timer < 0.0f)
+	{
+		MciStopSound(bgm_id);
+		stage = stages::victory;
+		InitSound(bgm02_id);
 	}
 
 	collision(player, enemy, &solidObject);
+	if (player->HP <= 0)
+	{
+		MciStopSound(bgm_id);
+		stage = stages::defeat;
+		InitSound(bgm03_id);
+	}
 }
 
 //Collision handler 
-void collision(character* player, character *enemy, object *obj)
+bool collision(character* player, character *enemy, object *obj)
 {
-	//TODO LIST
-	if (player->collided == 1)
+	//Collision detection for obstacles
+	if (Map2[player->position.y / 14][player->position.x / 16] == 2 ||
+		Map2[player->position.y / 23][player->position.x / 13] == 0)
 	{
-		player->HP--;
+		player->collided = 1;
 	}
+	else
+	{
+		player->collided = 0;
+	}
+
+	return false;
 }
 
 //Render passed function as game data for rendering
 void Render(void (*func)())
 {
 	//Set for framerate
-	int t = timeGetTime();
+	//int t = timeGetTime();
 
 	//Clearing frameBuffer space for rendering
 	ClearFrameBuffer(frameBuffer[0]);
@@ -434,83 +679,143 @@ void Render(void (*func)())
 	FlipScreen();
 
 	//Set framerate
-	int w = frameDelay - (timeGetTime() - t);
-	if (w > 0) {
-		Sleep(w);
-	}
-	frame++;
+	//int w = frameDelay - (timeGetTime() - t);
+	//if (w > 0) {
+	//	Sleep(w);
+	//}
+	//frame++;
 }
 
 //Initialize bullet 
-void InitBullet(object* bullets)
+void InitBullet(int posX, int y, int moveX, int moveY)
 {
-	bullets->prevPos = bullets->position;
+	for (int x = 0; x < 100; x++)
+	{
+		if (!bullets[x].enable)
+		{
+			bullets[x].position.x = posX;
+			bullets[x].position.y = y;
+			bullets[x].prevPos = bullets[x].position;
+			bullets[x].move.x = moveX;
+			bullets[x].move.y = moveY;
 
+			break;
+		}
+	}
 }
 
 //Free memory
 void FreeMemory()
 {
-	free(frameBuffer);
-	//FileEnd(&imgFile);
-	//free(pFB);
+	//free(frameBuffer);
 }
 
-/**
-* @brief	スプライトをオブジェクトに読み込む
-*
-* @param	sprite_path->sprite file name;
-*			pointer to object structure
-*/
-void load_sprite(object* obj, const char* _path)
-{
-	//Pass parameter to path value
-	obj->path = _path;
 
-	//Initialize FILE struct for image rendering
-	FILE* image;
-
-	//Opening file 
-	image = fopen(obj->path, "rb");
-
-	//Acquite sprite attributes
-	fseek(image, 18, SEEK_SET);
-	fread(&(obj->imageWidth), 4, 2, image);
-
-	//Acquire sprite data
-	fseek(image, 118, SEEK_SET);
-	for (int y = obj->imageHeight - 1; y >= 0; y--)
-	{
-		for (int x = 0; x < obj->imageWidth; x++)
-		{
-			char pixels;
-			fread(&pixels, 1, 1, image);
-			obj->sprite[y][x] = (pixels & 240) >> 4;
-			obj->sprite[y][++x] = pixels & 15;
-		}
-	}
-
-	//Close image file
-	fclose(image);
-	return;
-}
-
-//Player sprite rendering with camera
+//Player sprite rendering with camera and UI
 void player_sprite(character* player, object* camera)
 {                                    
 	//Player sprite render
-	for (int y = 0; y < 36; y++)
+	for (int y = 0; y < 26; y++)
 	{
-		for (int x = 0; x < 20; x++)
+		for (int x = 0; x < 16; x++)
 		{
-			if (Player_IDLE[player->anim][y][x] != 0x00)
+			if (player->direction == FRONT)
 			{
-				//Character sprite facing right
-				if (player->direction == RIGHT)
-					frameBuffer[y + player->position.y][x + player->position.x] = Player_IDLE[player->anim][y][x];
-				//Character sprite facing left
-				else
-					frameBuffer[y + player->position.y][20 - x + player->position.x] = Player_IDLE[player->anim][y][x];
+				if (Player_MOVINGFRONT[player->anim][y][x] != 0x00)
+				{
+					if (player->attacking)
+					{	
+						if (Player_ATTACKINGFRONT[y][x] != 0x00)
+							frameBuffer[y + player->position.y][x + player->position.x] = Player_ATTACKINGFRONT[y][x];
+					}
+					//Character sprite facing front
+					else
+						frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGFRONT[player->anim][y][x];
+					//frameBuffer[y + player->position.y][x + player->position.x] = Player_IDLE[player->anim][y][x];
+				}
+			}
+			else if (player->direction == LEFT)
+			{
+				if (Player_MOVINGSIDE[player->anim][y][x] != 0x00)
+				{
+					if (player->attacking)
+					{
+						if (Player_ATTACKINGSIDE[y][x] != 0x00)
+							frameBuffer[y + player->position.y][16 - x + player->position.x] = Player_ATTACKINGSIDE[y][x];
+					}
+					else
+						frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGSIDE[player->anim][y][x];
+				}
+			}
+			else if (player->direction == RIGHT)
+			{
+				if (Player_MOVINGSIDE[player->anim][y][x] != 0x00)
+				{
+					if (player->attacking)
+					{	
+						if (Player_ATTACKINGSIDE[y][x] != 0x00)
+							frameBuffer[y + player->position.y][x + player->position.x] = Player_ATTACKINGSIDE[y][x];
+					}
+					else
+						frameBuffer[y + player->position.y][16 - x + player->position.x] = Player_MOVINGSIDE[player->anim][y][x];
+				}
+			}
+			else if (player->direction == BACK)
+			{
+				if (Player_MOVINGBACK[player->anim][y][x] != 0x00)
+				{
+					frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGBACK[player->anim][y][x];
+				}
+			}
+		}
+	}
+
+	//Health UI
+	for (int y = 0; y < 11; y++)
+	{
+		for (int x = 0; x < 12; x++)
+		{
+			if (Health_UI[icon_anim][y][x] != 0x00)
+				frameBuffer[y + 210][x + 10] = Health_UI[icon_anim][y][x];
+		}
+	}
+	//CAN YOU SURVIVE Text
+	char string[64];
+	strcpy(&string[0], "CAN YOU SURVIVE?");
+
+	//ASCII Render
+	for (int y = 0; y < 8; y++)
+	{
+		for (int x = 0; x < 8; x++)
+		{
+			//x text
+			if (ascii[72][y][x] != 0x00)
+				frameBuffer[y + 213][x + 25] = ascii[72][y][x];
+			//Player HP
+			for (int z = 0; z < 6; z++)
+			{
+				if (ascii[z][y][z] != 0x00)
+					frameBuffer[y + 213][x + 36] = ascii[player->HP][y][x];
+			}
+
+			//Survive text
+			for (int i = 0; string[i] != NULL; i++)
+			{
+				//Ignoring sentences with space
+				if (string[i] == ' ')
+					continue;
+
+				//To fix C6011 Deferencing NULL ptr
+				if (ascii != nullptr && *ascii)
+				{
+					//-- 213 is the y position  & 82 is the x position 
+					if (*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x) != 0x00)
+					{
+						*((*frameBuffer) + (((y + 213) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 82 + i * 7) % SCREEN_WIDTH) =
+							*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x);
+					}
+				}
+				else return;
 			}
 		}
 	}
@@ -520,7 +825,10 @@ void player_sprite(character* player, object* camera)
 void map_sprite()
 {
 	//Load Map[20][20] to Map_Render[20 * 32][20 * 32]
-	char Map_Render[10 * 32][10 * 32];
+	//char Map_Render[10 * 32][10 * 32];
+	//[x * 20 + l]
+	//char* Map_Render = new char[10 * 32]{ 0 };
+	auto Map_Render = new char[10 * 32][10 * 32]{ 0 }; //Use this to fix C6262 warning using heap memory
 
 	//Load objects data to map
 	for (int y = 0; y < 10; y++)
@@ -551,7 +859,9 @@ void map_sprite()
 				{
 					for (int l = 0; l < 32; l++)
 					{
-						Map_Render[y * 20 + k][x * 20 + l] = Dirt[k][l];
+						if (Dirt[k][l] != 0x00)
+							//Map_Render[y * 20 + k][x * 20 + l] = Dirt[k][l];
+							Map_Render[y * 20 + k][x * 20 + l] = 0x0D;
 					}
 				}
 				break;
@@ -596,6 +906,9 @@ void map_sprite()
 			//frameBuffer[y][x] = WHITE;
 		}
 	}
+
+	//Clear heap memory
+	delete[] Map_Render;
 }
 
 //Load enemy sprite
@@ -628,19 +941,90 @@ void title_render()
 		}
 	}
 
-	//Foreground & texts
-	for (int y = 0; y < 30; y++)
+	//DEBUG Title Sprite
+	for (int y = 0; y < 33; y++)
 	{
-		for (int x = 0; x < 30; x++)
+		for (int x = 0; x < 128; x++)
 		{
-			//Title UI text
-			frameBuffer[y + 60][x + 85] = Title_UI[y][x];
+			if (Title_UI[y][x] != 0x00)
+				frameBuffer[y + TitleT.y][x + TitleT.x] = Title_UI[y][x];
+		}
+	}
 
-			//Start text
-			frameBuffer[y + 80][x + 85] = Start_UI[y][x];
+	//Start text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 64; x++)
+		{
+			if (Start_UI[y][x] != 0x00)
+				frameBuffer[y + StartT.y][x + StartT.x] = Start_UI[y][x];
+		}
+	}
 
+
+	//Cursor sprite
+	for (int y = 0; y < 12; y++)
+	{
+		for (int x = 0; x < 10; x++)
+		{
+			if (selectCursor == 1)
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + QuitT.y + 1][x + 70] = Cursor_UI[y][x];
+				}
+			}
+			else
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + StartT.y + 1][x + 55] = Cursor_UI[y][x];
+				}
+			}
+		}
+	}
+
+	//Quit Text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 36; x++)
+		{
 			//Quit text
-			frameBuffer[y + 100][x + 85] = Quit_UI[y][x];
+			if (Quit_UI[y][x] != 0x00)
+				frameBuffer[y + QuitT.y][x + QuitT.x] = Quit_UI[y][x];
+		}
+	}
+
+	//Copyright logo
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 16; x++)
+		{
+			if (Copyright[y][x] != 0x00)
+				frameBuffer[y + 212][x + 182] = Copyright[y][x];
+		}
+	}
+
+	//Player logo
+	for (int y = 0; y < 26; y++)
+	{
+		for (int x = 0; x < 16; x++)
+		{
+			if (Player_MOVINGSIDE[0][y][x] != 0x00)
+				frameBuffer[y + 10][16 - x + 10] = Player_MOVINGSIDE[0][y][x];
+		}
+	}
+
+	//Enemy logo
+	for (int y = 0; y < 14; y++)
+	{
+		for (int x = 0; x < 11; x++)
+		{
+			if (Enemy_MOVING[0][y][x] != 0x00)
+			{
+				frameBuffer[y + 15][11 - x + 175] = Enemy_MOVING[0][y][x];
+				frameBuffer[y + 18][11 - x + 163] = Enemy_MOVING[0][y][x];
+			}
 		}
 	}
 }
@@ -657,19 +1041,122 @@ void gameOver_render()
 		}
 	}
 
-	//Foreground & texts
-	for (int y = 0; y < 30; y++)
+	//GameOver text
+	for (int y = 0; y < 24; y++)
 	{
-		for (int x = 0; x < 30; x++)
+		for (int x = 0; x < 150; x++)
 		{
-			//Game over text
-			frameBuffer[y + 60][x + 85] = gameOver_UI[y][x];
+			if (gameOver_UI[y][x] != 0x00)
+				frameBuffer[y + GameOverT.y][x + GameOverT.x] = gameOver_UI[y][x];
+		}
+	}
 
-			//restart text
-			frameBuffer[y + 80][x + 85] = Restart_UI[y][x];
+	//Restart text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 70; x++)
+		{
+			if (Restart_UI[y][x] != 0x00)
+				frameBuffer[y + RestartT.y][x + RestartT.x] = Restart_UI[y][x];
+		}
+	}
 
+	//Cursor sprite
+	for (int y = 0; y < 12; y++)
+	{
+		for (int x = 0; x < 10; x++)
+		{
+			if (selectCursor == 1)
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + QuitT.y + 1][x + 70] = Cursor_UI[y][x];
+				}
+			}
+			else
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + RestartT.y + 1][x + 55] = Cursor_UI[y][x];
+				}
+			}
+		}
+	}
+
+	//Quit Text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 36; x++)
+		{
 			//Quit text
-			frameBuffer[y + 100][x + 85] = Quit_UI[y][x];
+			if (Quit_UI[y][x] != 0x00)
+				frameBuffer[y + QuitT.y][x + QuitT.x] = Quit_UI[y][x];
+		}
+	}
+}
+
+//Result render
+void Result_render()
+{
+	//Background
+	for (int y = 0; y < SCREEN_HEIGHT; y++)
+	{
+		for (int x = 0; x < SCREEN_WIDTH; x++)
+		{
+			frameBuffer[y][x] = 0x07;
+		}
+	}
+
+	//GameOver text
+	for (int y = 0; y < 33; y++)
+	{
+		for (int x = 0; x < 128; x++)
+		{
+			if (Victory_Text[y][x] != 0x00)
+				frameBuffer[y + VictoryT.y][x + VictoryT.x] = Victory_Text[y][x];
+		}
+	}
+
+	//Restart text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 70; x++)
+		{
+			if (Restart_UI[y][x] != 0x00)
+				frameBuffer[y + RestartT.y][x + RestartT.x] = Restart_UI[y][x];
+		}
+	}
+
+	//Cursor sprite
+	for (int y = 0; y < 12; y++)
+	{
+		for (int x = 0; x < 10; x++)
+		{
+			if (selectCursor == 1)
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + QuitT.y][x + 70] = Cursor_UI[y][x];
+				}
+			}
+			else
+			{
+				if (Cursor_UI[y][x] != 0x00)
+				{
+					frameBuffer[y + RestartT.y][x + 55] = Cursor_UI[y][x];
+				}
+			}
+		}
+	}
+
+	//Quit Text
+	for (int y = 0; y < 16; y++)
+	{
+		for (int x = 0; x < 36; x++)
+		{
+			//Quit text
+			if (Quit_UI[y][x] != 0x00)
+				frameBuffer[y + QuitT.y][x + QuitT.x] = Quit_UI[y][x];
 		}
 	}
 }
@@ -677,23 +1164,23 @@ void gameOver_render()
 //AI script logic
 void AI_Behaviour(chara* player, chara* enemy)
 {
-	if (enemy->position.x <= player->center.x)
+	if (enemy->position.x <= player->position.x)
 	{
 		enemy->direction = RIGHT;
-		enemy->position.x += 2;
+		enemy->position.x += 1;
 	}
 	else
 	{
 		enemy->direction = LEFT;
-		enemy->position.x -= 2;
+		enemy->position.x -= 1;
 	}
 	if (enemy->position.y <= player->center.y)
 	{
-		enemy->position.y += 2;
+		enemy->position.y += 1;
 	}
 	else
 	{
-		enemy->position.y -= 2;
+		enemy->position.y -= 1;
 	}
 }
 
@@ -704,25 +1191,106 @@ void bullet_sprite(chara* player, object* bullets)
 	{
 		for (int x = 0; x < 8; x++)
 		{
-			for (int z = 0; z < 20; z++)
+			if (bullets->enable)
 			{
 				if (Bullet[y][x] != 0x00)
 				{
-					if (player->direction == RIGHT)
-						frameBuffer[y + bullets->position.y][x + bullets->position.x + z] = Bullet[y][x];
-					else
-						frameBuffer[y + bullets->position.y][z - (x - bullets->position.x)] = Bullet[y][x];
+					frameBuffer[y + bullets->prevPos.y][x + bullets->move.x] = Bullet[y][x];
+					//frameBuffer[y + bullets->position.y + 7][x + bullets->position.x + 8] = Bullet[y][x];
 				}
 			}
 		}
 	}
 }
 
+//Display FPS 
+void DisplayFPS()
+{
+	char fps[10];
+	sprintf_s(fps, "FPS: %d", FPSCount);
+
+	SetCaption(fps);
+}
+
+
+
+
+
+//------------------------------------------------------------------------------------------------------------
+//-- UNUSED  FUNCTIONS --
+//Decided to keep it for reference
+//------------------------------------------------------------------------------------------------------------
+
+//Timer count
+int CountTime()
+{
+	//Timer
+	int seconds = 0;
+	int minutes = 0;
+	int hours = 0;
+
+	while (true)
+	{
+		Sleep(1000);
+		seconds++;
+
+		if (seconds == 60)
+		{
+			seconds = 0;
+			minutes++;
+		}
+
+		if (minutes == 60)
+		{
+			minutes = 0;
+			hours++;
+		}
+	}
+
+	return minutes;
+}
+/**
+* @brief	スプライトをオブジェクトに読み込む
+*
+* @param	sprite_path->sprite file name;
+*			pointer to object structure
+*/
+void load_sprite(object* obj, const char* _path)
+{
+	//Pass parameter to path value
+	obj->path = _path;
+
+	//Initialize FILE struct for image rendering
+	FILE* image;
+
+	//Opening file 
+	image = fopen(obj->path, "rb");
+
+	//Acquite sprite attributes
+	fseek(image, 18, SEEK_SET);
+	fread(&(obj->imageWidth), 4, 2, image);
+
+	//Acquire sprite data
+	fseek(image, 118, SEEK_SET);
+	for (int y = obj->imageHeight - 1; y >= 0; y--)
+	{
+		for (int x = 0; x < obj->imageWidth; x++)
+		{
+			char pixels;
+			fread(&pixels, 1, 1, image);
+			obj->sprite[y][x] = (pixels & 240) >> 4;
+			obj->sprite[y][++x] = pixels & 15;
+		}
+	}
+
+	//Close image file
+	fclose(image);
+	return;
+}
+
 //Load BMP for stage01
 void load_image(PFRAMEBUFFER pFB, char* frameBuffer)
 {
-	int t = timeGetTime();
-
 	//Initialize Console I/O
 	InitConio(pFB->width, pFB->height);
 
@@ -746,14 +1314,6 @@ void load_image(PFRAMEBUFFER pFB, char* frameBuffer)
 		PrintImage((PBYTE)frameBuffer);
 
 	FlipScreen();
-
-	//Set framerate
-	//１フレームの表示時間待ち
-	int w = frameDelay - (timeGetTime() - t);
-	if (w > 0) {
-		Sleep(w);
-	}
-	frame++;
 }
 
 

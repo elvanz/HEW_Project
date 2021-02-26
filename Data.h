@@ -15,9 +15,9 @@
 
 //Preprocessors
 #define SCREEN_WIDTH  200		
-#define SCREEN_HEIGHT 200
-#define VIEWPORT_W	  120
-#define VIEWPORT_H    120
+#define SCREEN_HEIGHT 230
+#define VIEWPORT_W	  200
+#define VIEWPORT_H    200
 #define FONT_WIDTH	   10
 #define FONT_HEIGHT	   10
 #define MAX_PIXELH	   64	//max rendered pixel height
@@ -69,8 +69,8 @@ typedef struct Point
 //Object data
 typedef struct object
 {
-	Point		prevPos, position;					//spawn coordinates
-	bool		interactable, actor;				//object behaviour
+	Point		prevPos, position, move;			//spawn coordinates
+	bool		interactable, actor, enable;		//object behaviour
 	int			imageWidth, imageHeight;
 	char		sprite[MAX_PIXELH][MAX_PIXELW];		//sprite buffer
 	const char	*path;
@@ -80,7 +80,7 @@ typedef struct object
 //Character data 
 typedef struct character
 {
-	Point		position, center;
+	Point		prevPos, position, center;
 	bool		moving, hasLooted, attacking;		//check if moving or not
 	int			ability, collided;					//ability
 	int			level, exp, HP, baseDamage;			//player stats

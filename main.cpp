@@ -34,7 +34,7 @@ int main(void)
 	//free memory
 	FreeMemory();
 
-	return 0;
+	return APP_EXIT;
 }	//main
 
 
