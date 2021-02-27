@@ -51,10 +51,14 @@ const char* BGM = "bgm\\BGM.mp3";
 const char* bgm01 = "bgm\\Struggle.wav";
 const char* bgm02 = "bgm\\VICTORY.mp3";
 const char* bgm03 = "bgm\\GAMEOVER.wav";
+const char* bgm04 = "bgm\\Shoot.wav";
+const char* bgm05 = "bgm\\Squish.wav";
 int* bgm_id = MciOpenSound(BGM);
 int* bgm01_id = MciOpenSound(bgm01);
 int* bgm02_id = MciOpenSound(bgm02);
 int* bgm03_id = MciOpenSound(bgm03);
+int* bgm04_id = MciOpenSound(bgm04);
+int* bgm05_id = MciOpenSound(bgm05);
 
 //Initialize Sound
 void InitSound(int *bgm)
@@ -117,14 +121,14 @@ void Stage01()
 			AI_Behaviour(&player, &enemy[i]);
 		}
 
-		//TODO LIST Player shoot
-		//for (int count = 0; count < 100; count++)
-		//{
-		//	if (bullets[count].enable)
-		//	{
-		//		bullet_sprite(&player, &bullets[count]);
-		//	}
-		//}
+		//TODO LIST Player shoot instantiate bullet
+		for (int count = 0; count < 100; count++)
+		{
+			if (bullets[count].enable)
+			{
+				bullet_sprite(&player, &bullets[count]);
+			}
+		}
 	}
 }
 
@@ -358,15 +362,7 @@ void Start()
 	player.imageWidth = 16;
 
 	//InitBullet 
-	for (int x = 0; x < 100; x++)
-	{
-		bullets[x].position.x = 0;
-		bullets[x].position.y = 0;
-		bullets[x].prevPos.x = 0;
-		bullets[x].prevPos.y = 0;
-		bullets[x].move.x = 0;
-		bullets[x].move.y = 0;
-	}
+	InitBullet();
 
 	//Set enemy sprite attributes
 	for (int i = 0; i < 10; i++)
@@ -444,40 +440,41 @@ void Input(chara* player)
 	}
 
 
-	//Instantiate Bullet
+	//Instantiate Bullet -- CURRENTLY NOT WORKING --
 	if (KeyEdge[VK_SPACE])
 	{
+		for (int x = 0; x < 100; x++)
+			bullets[x].enable = true;
+
 		if (!player->attacking)
 		{
 			player->attacking = true;
-			for (int x = 0; x < 100; x++)
-				bullets[x].enable = true;
-			
-			if (player->direction == RIGHT)
-			{
-				InitBullet(player->position.x + player->prevPos.x + 2,
-					player->prevPos.y,
-					2, 0);
-			}
-			else if (player->direction == LEFT)
-			{
-				InitBullet(player->position.x + player->prevPos.x - 2,
-					player->prevPos.y,
-					2, 0);
-			}
-			else if (player->direction == BACK)
-			{
-				InitBullet(player->prevPos.x,
-					player->prevPos.y - 2,
-					2, 0);
-			}
-			else
-			{
-				InitBullet(player->prevPos.x,
-					player->prevPos.y + 2,
-					2, 0);
-			}
-			
+			InitSound(bgm04_id);
+		}
+
+		if (player->direction == RIGHT)
+		{
+			SetBullet(player->position.x + player->prevPos.x + 2,
+				player->prevPos.y,
+				2, 0);
+		}
+		else if (player->direction == LEFT)
+		{
+			SetBullet(player->position.x + player->prevPos.x - 2,
+				player->prevPos.y,
+				2, 0);
+		}
+		else if (player->direction == BACK)
+		{
+			SetBullet(player->prevPos.x,
+				player->prevPos.y - 2,
+				2, 0);
+		}
+		else
+		{
+			SetBullet(player->prevPos.x,
+				player->prevPos.y + 2,
+				2, 0);
 		}
 	}
 	else
@@ -557,6 +554,9 @@ void Update(chara *player, chara* enemy, object *camera)
 	//Set bullet shooting position
 	for (int y = 0; y < 100; y++)
 	{ 
+		//Set starting position for bullets
+		bullets[y].position = player->center;
+
 		if (bullets[y].enable)
 		{
 			//Set prev position to current position
@@ -566,10 +566,10 @@ void Update(chara *player, chara* enemy, object *camera)
 			bullets[y].position = bullets[y].move;
 
 			//The bullets hit the border or solid object
-			if (bullets[y].position.x < 8 || bullets[y].position.y < 7 ||
-				bullets[y].position.x > 208 || bullets[y].position.y > 207)
+			if (bullets[y].position.x < 0 || bullets[y].position.y < 0 ||
+				bullets[y].position.x > 200 || bullets[y].position.y > 20)
 			{
-				bullets[y].enable = false;
+				//bullets[y].enable = false;
 			}
 
 			bullet_sprite(player, &bullets[y]);
@@ -598,6 +598,7 @@ void Update(chara *player, chara* enemy, object *camera)
 
 		if (distance_x[i] == 0 && distance_y[i] == 0)
 		{
+			InitSound(bgm05_id);
 			player->HP--;
 			if (player->direction == LEFT)
 				player->position.x += 5;
@@ -686,8 +687,22 @@ void Render(void (*func)())
 	//frame++;
 }
 
-//Initialize bullet 
-void InitBullet(int posX, int y, int moveX, int moveY)
+//Initialize bullet
+void InitBullet()
+{
+	for (int x = 0; x < 100; x++)
+	{
+		bullets[x].position.x = 0;
+		bullets[x].position.y = 0;
+		bullets[x].prevPos.x = 0;
+		bullets[x].prevPos.y = 0;
+		bullets[x].move.x = 0;
+		bullets[x].move.y = 0;
+		bullets[x].enable = false;
+	}
+}
+//Set bullet 
+void SetBullet(int posX, int y, int moveX, int moveY)
 {
 	for (int x = 0; x < 100; x++)
 	{
@@ -711,7 +726,7 @@ void FreeMemory()
 }
 
 
-//Player sprite rendering with camera and UI
+//Player sprite rendering with GUI HUD
 void player_sprite(character* player, object* camera)
 {                                    
 	//Player sprite render
@@ -770,6 +785,9 @@ void player_sprite(character* player, object* camera)
 		}
 	}
 
+
+	// -- GUI --
+	//--------------------------------------------------------------------------
 	//Health UI
 	for (int y = 0; y < 11; y++)
 	{
@@ -815,7 +833,7 @@ void player_sprite(character* player, object* camera)
 							*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x);
 					}
 				}
-				else return;
+				else break;
 			}
 		}
 	}
@@ -971,7 +989,7 @@ void title_render()
 			{
 				if (Cursor_UI[y][x] != 0x00)
 				{
-					frameBuffer[y + QuitT.y + 1][x + 70] = Cursor_UI[y][x];
+					frameBuffer[y + QuitT.y + 2][x + 70] = Cursor_UI[y][x];
 				}
 			}
 			else
@@ -1070,7 +1088,7 @@ void gameOver_render()
 			{
 				if (Cursor_UI[y][x] != 0x00)
 				{
-					frameBuffer[y + QuitT.y + 1][x + 70] = Cursor_UI[y][x];
+					frameBuffer[y + QuitT.y + 2][x + 70] = Cursor_UI[y][x];
 				}
 			}
 			else
@@ -1107,7 +1125,7 @@ void Result_render()
 		}
 	}
 
-	//GameOver text
+	//Victory text
 	for (int y = 0; y < 33; y++)
 	{
 		for (int x = 0; x < 128; x++)
@@ -1195,7 +1213,7 @@ void bullet_sprite(chara* player, object* bullets)
 			{
 				if (Bullet[y][x] != 0x00)
 				{
-					frameBuffer[y + bullets->prevPos.y][x + bullets->move.x] = Bullet[y][x];
+					frameBuffer[y + player->center.y][x + player->center.x] = Bullet[y][x];
 					//frameBuffer[y + bullets->position.y + 7][x + bullets->position.x + 8] = Bullet[y][x];
 				}
 			}
@@ -1203,6 +1221,7 @@ void bullet_sprite(chara* player, object* bullets)
 	}
 }
 
+#ifdef _DEBUG
 //Display FPS 
 void DisplayFPS()
 {
@@ -1211,6 +1230,9 @@ void DisplayFPS()
 
 	SetCaption(fps);
 }
+#endif // _DEBUG
+
+
 
 
 

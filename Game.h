@@ -47,7 +47,8 @@ extern void StartMenu();
 extern void Stage01();
 extern void GameOver();
 extern void Result();
-extern void InitBullet(int , int, int, int);
+extern void InitBullet();
+extern void SetBullet(int , int, int, int);
 extern void KeyRead();
 extern void player_sprite(character* player, object* camera);
 extern void enemy_sprite(chara* enemy);
@@ -59,10 +60,12 @@ extern void Result_render();
 extern bool collision(chara*, chara*, object*);
 extern void AI_Behaviour(chara*, chara*);
 extern void DisplayFPS();
-extern int CountTime();
+
+
 
 //---------------------------------------------------------------
 //-- UNUSED --
+extern int CountTime();
 extern void load_sprite(object*, const char* _path);
 extern void load_image(PFRAMEBUFFER pFB, char *frameBuffer);
 extern void SwapBGR(PFRAMEBUFFER pFB);
