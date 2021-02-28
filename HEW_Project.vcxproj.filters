@@ -70,6 +70,21 @@
     <Media Include="bgm\Struggle.wav">
       <Filter>Resource Files\Sound</Filter>
     </Media>
+    <Media Include="bgm\BGM.mp3">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
+    <Media Include="bgm\Shoot.wav">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
+    <Media Include="bgm\Squish.wav">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
+    <Media Include="bgm\GAMEOVER.wav">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
+    <Media Include="bgm\VICTORY.mp3">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Image Include="bmp\title.bmp">

@@ -168,8 +168,13 @@
     <ClInclude Include="Renderer.h" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="bgm\BGM.mp3" />
     <Media Include="bgm\BGM02.mp3" />
+    <Media Include="bgm\GAMEOVER.wav" />
+    <Media Include="bgm\Shoot.wav" />
+    <Media Include="bgm\Squish.wav" />
     <Media Include="bgm\Struggle.wav" />
+    <Media Include="bgm\VICTORY.mp3" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="bmp\title.bmp" />

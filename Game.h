@@ -33,6 +33,7 @@ static Image imgFile;
 static FrameBuffer pFB;
 
 static int icon_anim;
+static int killCount;
 //-------------------------------------------------------------
 /* All functions goes here */
 extern void InitSound(int *);
@@ -49,6 +50,7 @@ extern void GameOver();
 extern void Result();
 extern void InitBullet();
 extern void SetBullet(int , int, int, int);
+extern void UpdateBullet();
 extern void KeyRead();
 extern void player_sprite(character* player, object* camera);
 extern void enemy_sprite(chara* enemy);

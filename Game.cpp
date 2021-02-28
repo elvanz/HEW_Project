@@ -7,11 +7,11 @@
 * TODO LIST
 * - Start menu fix (frameBuffer) -- DONE --
 * - More player sprite & animation -- DONE --
-* - Camera Movement -- NOT DONE --
+* - Camera Movement -- ABANDONED --
 * - Spawn more enemies -- HALF DONE --
-* - Bullet logic -- HALF DONE --
+* - Bullet logic -- DONE --
 * - Collision -- HALF DONE --
-* - Memory Optimization -- NOT DONE --
+* - Memory Optimization -- HALF DONE --
 * - Timer for Game System -- HALF DONE --
 * - Timer for FPS Optimization -- DONE --
 */
@@ -117,8 +117,11 @@ void Stage01()
 		//Instantiate enemy
 		for (int i = 0; i < 10; i++)
 		{
-			enemy_sprite(&enemy[i]);
-			AI_Behaviour(&player, &enemy[i]);
+			if (enemy[i].alive == 1)
+			{
+				enemy_sprite(&enemy[i]);
+				AI_Behaviour(&player, &enemy[i]);
+			}
 		}
 
 		//TODO LIST Player shoot instantiate bullet
@@ -348,6 +351,7 @@ void Start()
 	gameRunning = true;
 	timer = 50.0f;
 	icon_anim = 0;
+	killCount = 0;
 	player.moving = false;
 	player.attacking = false;
 	player.direction = FRONT;
@@ -367,6 +371,9 @@ void Start()
 	//Set enemy sprite attributes
 	for (int i = 0; i < 10; i++)
 	{
+		//Set enemy alive
+		enemy[i].alive = 1;
+
 		//Starting position for enemy
 		enemy[i].position.x = (rand() % 200) + 1;
 		enemy[i].position.y = (rand() % 200) + 1;
@@ -440,41 +447,45 @@ void Input(chara* player)
 	}
 
 
-	//Instantiate Bullet -- CURRENTLY NOT WORKING --
-	if (KeyEdge[VK_SPACE])
+	// -- INSTANTIATE BULLETS --
+	if (KeyEdge[VK_UP])
 	{
-		for (int x = 0; x < 100; x++)
-			bullets[x].enable = true;
-
 		if (!player->attacking)
 		{
+			SetBullet(player->center.x + 2, player->position.y, 0, -3);
 			player->attacking = true;
+			player->direction = BACK;
 			InitSound(bgm04_id);
 		}
-
-		if (player->direction == RIGHT)
+	}
+	else if (KeyEdge[VK_DOWN])
+	{
+		if (!player->attacking)
 		{
-			SetBullet(player->position.x + player->prevPos.x + 2,
-				player->prevPos.y,
-				2, 0);
+			SetBullet(player->center.x + 2, player->center.y + 2, 0, 3);
+			player->attacking = true;
+			player->direction = FRONT;
+			InitSound(bgm04_id);
 		}
-		else if (player->direction == LEFT)
+	}
+	else if (KeyEdge[VK_LEFT])
+	{
+		if (!player->attacking)
 		{
-			SetBullet(player->position.x + player->prevPos.x - 2,
-				player->prevPos.y,
-				2, 0);
+			SetBullet(player->center.x + 2, player->center.y, -3, 0);
+			player->attacking = true;
+			player->direction = LEFT;
+			InitSound(bgm04_id);
 		}
-		else if (player->direction == BACK)
+	}
+	else if (KeyEdge[VK_RIGHT])
+	{
+		if (!player->attacking)
 		{
-			SetBullet(player->prevPos.x,
-				player->prevPos.y - 2,
-				2, 0);
-		}
-		else
-		{
-			SetBullet(player->prevPos.x,
-				player->prevPos.y + 2,
-				2, 0);
+			SetBullet(player->center.x + 2, player->center.y, 3, 0);
+			player->attacking = true;
+			player->direction = RIGHT;
+			InitSound(bgm04_id);
 		}
 	}
 	else
@@ -540,8 +551,8 @@ void Update(chara *player, chara* enemy, object *camera)
 		icon_anim = 0;
 
 	//TODO Camera Movement
-	camera->position.x = (player->position.x + (player->imageWidth / 2)) - (camera->imageWidth / 2);
-	camera->position.y = (player->position.y + (player->imageHeight / 2)) - (camera->imageHeight / 2);
+	//camera->position.x = (player->position.x + (player->imageWidth / 2)) - (camera->imageWidth / 2);
+	//camera->position.y = (player->position.y + (player->imageHeight / 2)) - (camera->imageHeight / 2);
 
 	//----------------------------------------------------------------
 	//Update player & enemy position for collision
@@ -552,71 +563,52 @@ void Update(chara *player, chara* enemy, object *camera)
 
 
 	//Set bullet shooting position
-	for (int y = 0; y < 100; y++)
-	{ 
-		//Set starting position for bullets
-		bullets[y].position = player->center;
-
-		if (bullets[y].enable)
-		{
-			//Set prev position to current position
-			bullets[y].prevPos = bullets[y].position;
-
-			//Update the current position to transform movement
-			bullets[y].position = bullets[y].move;
-
-			//The bullets hit the border or solid object
-			if (bullets[y].position.x < 0 || bullets[y].position.y < 0 ||
-				bullets[y].position.x > 200 || bullets[y].position.y > 20)
-			{
-				//bullets[y].enable = false;
-			}
-
-			bullet_sprite(player, &bullets[y]);
-		}
-	}
+	UpdateBullet();
 	//bullets.position.x = player->center.x;
 	//bullets.position.y = player->center.y;
 
 	for (int i = 0; i < 10; i++)
-	{
-		//Update animation per frame
-		enemy[i].anim++;
-		//Clamp enemy animation
-		if (enemy[i].anim > 2)
+	{	
+		if (enemy[i].alive == 1)
 		{
-			enemy[i].anim = 0;
+			//Update animation per frame
+			enemy[i].anim++;
+			//Clamp enemy animation
+			if (enemy[i].anim > 2)
+			{
+				enemy[i].anim = 0;
+			}
+
+			//Set enemy center for collision
+			enemy[i].center.x = enemy[i].position.x + (enemy[i].imageWidth / 2);
+			enemy[i].center.y = enemy[i].position.y + (enemy[i].imageHeight / 2);
+
+			//Player & enemy distance
+			distance_x[i] = player->position.x - enemy[i].position.x;
+			distance_y[i] = player->center.y - enemy[i].position.y;
+
+			if (distance_x[i] == 0 && distance_y[i] == 0)
+			{
+				InitSound(bgm05_id);
+				player->HP--;
+				if (player->direction == LEFT)
+					player->position.x += 5;
+				else if (player->direction == RIGHT)
+					player->position.x -= 5;
+				else if (player->direction == FRONT)
+					player->position.y -= 5;
+				else
+					player->position.y += 5;
+			}
+			//TODO LIST distance for collision detection
+			//if (distance_x[i] < 0)
+			//	distance_x[i] *= -1;
+			//if (distance_y[i] < 0)
+			//	distance_y[i] *= -1;
+			//
+			//if (distance_x[i] <= 0 && distance_y[i] <= 0)
+			//	player->collided = 1;
 		}
-
-		//Set enemy center for collision
-		enemy[i].center.x = enemy[i].position.x + (enemy[i].imageWidth / 2);
-		enemy[i].center.y = enemy[i].position.y + (enemy[i].imageHeight / 2);
-
-		//Player & enemy distance
-		distance_x[i] = player->position.x - enemy[i].position.x;
-		distance_y[i] = player->center.y - enemy[i].position.y;
-
-		if (distance_x[i] == 0 && distance_y[i] == 0)
-		{
-			InitSound(bgm05_id);
-			player->HP--;
-			if (player->direction == LEFT)
-				player->position.x += 5;
-			else if (player->direction == RIGHT)
-				player->position.x -= 5;
-			else if (player->direction == FRONT)
-				player->position.y -= 5;
-			else
-				player->position.y += 5;
-		}
-		//TODO LIST distance for collision detection
-		//if (distance_x[i] < 0)
-		//	distance_x[i] *= -1;
-		//if (distance_y[i] < 0)
-		//	distance_y[i] *= -1;
-		//
-		//if (distance_x[i] <= 0 && distance_y[i] <= 0)
-		//	player->collided = 1;
 	}
 
 #ifdef _DEBUG
@@ -640,9 +632,9 @@ void Update(chara *player, chara* enemy, object *camera)
 }
 
 //Collision handler 
-bool collision(character* player, character *enemy, object *obj)
+bool collision(character* player, character* enemy, object* obj)
 {
-	//Collision detection for obstacles
+	//Collision detection for obstacles -- CURRENTLY NOT WORKING --
 	if (Map2[player->position.y / 14][player->position.x / 16] == 2 ||
 		Map2[player->position.y / 23][player->position.x / 13] == 0)
 	{
@@ -651,6 +643,14 @@ bool collision(character* player, character *enemy, object *obj)
 	else
 	{
 		player->collided = 0;
+	}
+
+	//Enemy collision with bullet -- CURRENTLY NOT WORKING --
+	if (bullets->position.x + bullets->move.x == enemy->position.x
+		|| bullets->position.y + bullets->move.y == enemy->position.y)
+	{
+		enemy->alive = 0;
+		killCount++;
 	}
 
 	return false;
@@ -713,8 +713,33 @@ void SetBullet(int posX, int y, int moveX, int moveY)
 			bullets[x].prevPos = bullets[x].position;
 			bullets[x].move.x = moveX;
 			bullets[x].move.y = moveY;
+			bullets[x].enable = true;
 
 			break;
+		}
+	}
+}
+
+void UpdateBullet()
+{
+	//Set bullet shooting position
+	for (int y = 0; y < 100; y++)
+	{
+		if (bullets[y].enable)
+		{
+			//Set prev position to current position
+			bullets[y].prevPos = bullets[y].position;
+
+			//Update the current position to transform movement
+			bullets[y].position.x += bullets[y].move.x;
+			bullets[y].position.y += bullets[y].move.y;
+
+			//The bullets hit the border or solid object
+			if (bullets[y].position.x < 0 || bullets[y].position.y < 0 ||
+				bullets[y].position.x > 193 || bullets[y].position.y > 200)
+			{
+				bullets[y].enable = false;
+			}
 		}
 	}
 }
@@ -1213,7 +1238,7 @@ void bullet_sprite(chara* player, object* bullets)
 			{
 				if (Bullet[y][x] != 0x00)
 				{
-					frameBuffer[y + player->center.y][x + player->center.x] = Bullet[y][x];
+					frameBuffer[y + bullets->position.y][x + bullets->position.x] = Bullet[y][x];
 					//frameBuffer[y + bullets->position.y + 7][x + bullets->position.x + 8] = Bullet[y][x];
 				}
 			}
