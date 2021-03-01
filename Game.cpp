@@ -25,7 +25,8 @@ char frameBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 bool gameRunning = false;
 int selectCursor;
 int stage;
-int	distance_x[5], distance_y[5];
+int wave;
+int killCount;
 int KeyPush[NUM_KEY];
 int KeyEdge[NUM_KEY];
 //int icon_anim = 0;
@@ -91,12 +92,6 @@ void StartMenu()
 	//================================================================
 	//Å°Forwaring image data to frameBuffer & render
 	//================================================================
-
-	//TODO LIST
-	//
-	//
-	//
-	//
 	title_render();
 }
 
@@ -123,6 +118,7 @@ void Stage01()
 				AI_Behaviour(&player, &enemy[i]);
 			}
 		}
+			
 
 		//TODO LIST Player shoot instantiate bullet
 		for (int count = 0; count < 100; count++)
@@ -138,13 +134,18 @@ void Stage01()
 //Game over screen
 void GameOver()
 {
-	//TODO LIST
+	//================================================================
+	//Å°Forwaring image data to frameBuffer & render
+	//================================================================
 	gameOver_render();
 }
 
 //Result 
 void Result()
 {
+	//================================================================
+	//Å°Forwaring image data to frameBuffer & render
+	//================================================================
 	Result_render();
 }
 
@@ -191,8 +192,8 @@ void MainGame()
 		{
 			//Input handle
 			KeyRead();
-			//Load startmenu image
-			//load_image(imgFile.pFB0, imgFile.frameBuffer);
+			
+			//Render graphics
 			Render(&StartMenu);
 
 			// -- SELECTION --
@@ -341,13 +342,7 @@ void MainGame()
 //Handles all the data for initialization
 void Start()
 {
-	//Assign imgFile
-	//imgFile = { NULL, NULL, NULL, NULL };
-
-	//Generate random number
-	srand((unsigned)time(0));
-
-	//Set game state to running 
+	//Game state 
 	gameRunning = true;
 	timer = 50.0f;
 	icon_anim = 0;
@@ -356,6 +351,7 @@ void Start()
 	player.attacking = false;
 	player.direction = FRONT;
 	player.HP = 5;
+	wave = 1;
 
 	//Starting position set to center
 	player.position.x = 100;
@@ -369,19 +365,7 @@ void Start()
 	InitBullet();
 
 	//Set enemy sprite attributes
-	for (int i = 0; i < 10; i++)
-	{
-		//Set enemy alive
-		enemy[i].alive = 1;
-
-		//Starting position for enemy
-		enemy[i].position.x = (rand() % 200) + 1;
-		enemy[i].position.y = (rand() % 200) + 1;
-
-		//Set image attributes
-		enemy[i].imageHeight = 14;
-		enemy[i].imageWidth = 11;
-	}
+	InitEnemy();
 
 	//Camera center transform
 	gameCamera.imageHeight = 60;
@@ -446,7 +430,7 @@ void Input(chara* player)
 			player->anim = IDLE;
 	}
 
-
+	// ---------------------------------------------------------------------------
 	// -- INSTANTIATE BULLETS --
 	if (KeyEdge[VK_UP])
 	{
@@ -530,15 +514,6 @@ void Update(chara *player, chara* enemy, object *camera)
 
 
 	//----------------------------------------------------------------
-	//Player animation state
-	//if (player->moving == false)
-	//{
-	//	player->anim = IDLE;
-	//}
-	//else
-	//{
-	//	player->anim++;
-	//}
 	//Looping animation 
 	if (player->anim > 3)
 	{
@@ -561,14 +536,91 @@ void Update(chara *player, chara* enemy, object *camera)
 	player->center.x = player->position.x + (player->imageWidth / 2);
 	player->center.y = player->position.y + (player->imageHeight / 2);
 
+	//Update enemy
+	UpdateEnemy(player);
 
 	//Set bullet shooting position
 	UpdateBullet();
-	//bullets.position.x = player->center.x;
-	//bullets.position.y = player->center.y;
+	BulletCollision();
+
+	
+#ifdef _DEBUG
+	//timer -= 0.1f;
+#endif // _DEBUG
+	
+	if (killCount == 10)
+	{
+		wave = 2;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+	else if (killCount == 20)
+	{
+		wave = 3;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+	else if (killCount == 30)
+	{
+		wave = 4;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+	else if (killCount == 40)
+	{
+		wave = 5;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+
+	//Set kill count for result
+	if (wave == 5 && killCount >= 50)
+	{
+		MciStopSound(bgm_id);
+		stage = stages::victory;
+		InitSound(bgm02_id);
+	}
+
+	//collision(player, enemy, &solidObject);
+	if (player->HP <= 0)
+	{
+		MciStopSound(bgm_id);
+		stage = stages::defeat;
+		InitSound(bgm03_id);
+	}
+}
+
+//Initialize enemy 
+void InitEnemy()
+{
+	//Generate random number seed
+	srand((unsigned)time(0));
 
 	for (int i = 0; i < 10; i++)
-	{	
+	{
+		//Set enemy alive
+		enemy[i].alive = 1;
+
+		//Starting position for enemy
+		enemy[i].position.x = rand() % 200 + 1;
+		enemy[i].position.y = rand() % 200 + 1;
+
+		//Set image attributes
+		enemy[i].imageHeight = 14;
+		enemy[i].imageWidth = 11;
+	}
+}
+
+//Enemy update
+void UpdateEnemy(character* player)
+{
+	//Declare distances for each enemy
+	int	distance_x[10], distance_y[10];
+	int distance_x2[10], distance_y2[10];
+
+	//Detection with broad phase
+	for (int i = 0; i < 10; i++)
+	{
 		if (enemy[i].alive == 1)
 		{
 			//Update animation per frame
@@ -580,14 +632,23 @@ void Update(chara *player, chara* enemy, object *camera)
 			}
 
 			//Set enemy center for collision
-			enemy[i].center.x = enemy[i].position.x + (enemy[i].imageWidth / 2);
-			enemy[i].center.y = enemy[i].position.y + (enemy[i].imageHeight / 2);
+			enemy[i].center.x = enemy[i].position.x + (enemy[i].imageWidth / 2) - 2;
+			enemy[i].center.y = enemy[i].position.y + (enemy[i].imageHeight / 2) - 2;
 
 			//Player & enemy distance
-			distance_x[i] = player->position.x - enemy[i].position.x;
-			distance_y[i] = player->center.y - enemy[i].position.y;
+			distance_x[i] = player->center.x - enemy[i].center.x;
+			distance_y[i] = player->center.y - enemy[i].center.y;
+			distance_x2[i] = (player->imageWidth / 2) + (enemy[i].imageWidth / 2) - 2;
+			distance_y2[i] = (player->imageHeight / 2) + (enemy[i].imageHeight / 2) - 2;
 
-			if (distance_x[i] == 0 && distance_y[i] == 0)
+			//Update to constant value
+			if (distance_x[i] < 0)
+				distance_x[i] *= -1;
+			if (distance_y[i] < 0)
+				distance_y[i] *= -1;
+
+			//Collision detection
+			if (distance_x[i] < distance_x2[i] && distance_y[i] < distance_y2[i])
 			{
 				InitSound(bgm05_id);
 				player->HP--;
@@ -600,61 +661,10 @@ void Update(chara *player, chara* enemy, object *camera)
 				else
 					player->position.y += 5;
 			}
-			//TODO LIST distance for collision detection
-			//if (distance_x[i] < 0)
-			//	distance_x[i] *= -1;
-			//if (distance_y[i] < 0)
-			//	distance_y[i] *= -1;
-			//
-			//if (distance_x[i] <= 0 && distance_y[i] <= 0)
-			//	player->collided = 1;
 		}
 	}
-
-#ifdef _DEBUG
-	//timer -= 0.1f;
-#endif // _DEBUG
-
-	if (timer < 0.0f)
-	{
-		MciStopSound(bgm_id);
-		stage = stages::victory;
-		InitSound(bgm02_id);
-	}
-
-	collision(player, enemy, &solidObject);
-	if (player->HP <= 0)
-	{
-		MciStopSound(bgm_id);
-		stage = stages::defeat;
-		InitSound(bgm03_id);
-	}
 }
 
-//Collision handler 
-bool collision(character* player, character* enemy, object* obj)
-{
-	//Collision detection for obstacles -- CURRENTLY NOT WORKING --
-	if (Map2[player->position.y / 14][player->position.x / 16] == 2 ||
-		Map2[player->position.y / 23][player->position.x / 13] == 0)
-	{
-		player->collided = 1;
-	}
-	else
-	{
-		player->collided = 0;
-	}
-
-	//Enemy collision with bullet -- CURRENTLY NOT WORKING --
-	if (bullets->position.x + bullets->move.x == enemy->position.x
-		|| bullets->position.y + bullets->move.y == enemy->position.y)
-	{
-		enemy->alive = 0;
-		killCount++;
-	}
-
-	return false;
-}
 
 //Render passed function as game data for rendering
 void Render(void (*func)())
@@ -720,6 +730,7 @@ void SetBullet(int posX, int y, int moveX, int moveY)
 	}
 }
 
+//Update bullet movement
 void UpdateBullet()
 {
 	//Set bullet shooting position
@@ -744,10 +755,63 @@ void UpdateBullet()
 	}
 }
 
+//Handle bullet collision with enemy
+void BulletCollision()
+{
+	//Define distances for each bullet
+	int distance_x[100], distance_y[100];
+	int distance_x2[100], distance_y2[100];
+	int hit_flag = 0;
+
+	//Detection with broad phase 
+	for (int y = 0; y < 100; y++)
+	{
+		if (bullets[y].enable)
+		{
+			//Reference enemy
+			for (int count = 0; count < 10; count++)
+			{
+				if (enemy[count].alive == 1)
+				{
+					//Player & enemy distance
+					distance_x[y] = (bullets[y].position.x + (8 / 2)) - enemy[count].center.x;
+					distance_y[y] = (bullets[y].position.y + (7 / 2)) - enemy[count].center.y;
+					distance_x2[y] = (8 / 2) + (enemy[count].imageWidth / 2);
+					distance_y2[y] = (7 / 2) + (enemy[count].imageHeight / 2);
+
+					//Update to constant value
+					if (distance_x[y] < 0)
+						distance_x[y] *= -1;
+					if (distance_y[y] < 0)
+						distance_y[y] *= -1;
+
+					//Collision detection
+					if (distance_x[y] < distance_x2[y] && distance_y[y] < distance_y2[y])
+					{
+						hit_flag = 1;
+					}
+					else
+					{
+						hit_flag = 0;
+					}
+
+					if (hit_flag == 1)
+					{
+						killCount++;
+						enemy[count].alive = 0;
+						bullets[y].enable = false;
+					}
+				}
+			}
+			
+		}
+	}
+}
+
 //Free memory
 void FreeMemory()
 {
-	//free(frameBuffer);
+	//TODO
 }
 
 
@@ -771,7 +835,6 @@ void player_sprite(character* player, object* camera)
 					//Character sprite facing front
 					else
 						frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGFRONT[player->anim][y][x];
-					//frameBuffer[y + player->position.y][x + player->position.x] = Player_IDLE[player->anim][y][x];
 				}
 			}
 			else if (player->direction == LEFT)
@@ -823,8 +886,19 @@ void player_sprite(character* player, object* camera)
 		}
 	}
 	//CAN YOU SURVIVE Text
-	char string[64];
-	strcpy(&string[0], "CAN YOU SURVIVE?");
+	char string[64]{ 0 };
+	char string2[64]{ 0 };
+	strcpy(&string2[0], "MOVE");
+	if (wave == 1)
+		strcpy(&string[0], "WAVE 1");
+	else if (wave == 2)
+		strcpy(&string[0], "WAVE 2");
+	else if (wave == 3)
+		strcpy(&string[0], "WAVE 3");
+	else if (wave == 4)
+		strcpy(&string[0], "WAVE 4");
+	else if (wave == 5)
+		strcpy(&string[0], "WAVE 5");
 
 	//ASCII Render
 	for (int y = 0; y < 8; y++)
@@ -845,7 +919,7 @@ void player_sprite(character* player, object* camera)
 			for (int i = 0; string[i] != NULL; i++)
 			{
 				//Ignoring sentences with space
-				if (string[i] == ' ')
+				if (string[i] == ' ' || string2[i] == ' ')
 					continue;
 
 				//To fix C6011 Deferencing NULL ptr
@@ -856,6 +930,13 @@ void player_sprite(character* player, object* camera)
 					{
 						*((*frameBuffer) + (((y + 213) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 82 + i * 7) % SCREEN_WIDTH) =
 							*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x);
+					}
+
+					//-- 213 is the y position  & 82 is the x position 
+					if (*(*(*ascii) + ((string2[i] - 0x30) * 8 * 8) + (y * 8) + x) != 0x00)
+					{
+						*((*frameBuffer) + (((y + 213) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 152 + i * 7) % SCREEN_WIDTH) =
+							*(*(*ascii) + ((string2[i] - 0x30) * 8 * 8) + (y * 8) + x);
 					}
 				}
 				else break;
@@ -1179,14 +1260,14 @@ void Result_render()
 			{
 				if (Cursor_UI[y][x] != 0x00)
 				{
-					frameBuffer[y + QuitT.y][x + 70] = Cursor_UI[y][x];
+					frameBuffer[y + QuitT.y + 2][x + 70] = Cursor_UI[y][x];
 				}
 			}
 			else
 			{
 				if (Cursor_UI[y][x] != 0x00)
 				{
-					frameBuffer[y + RestartT.y][x + 55] = Cursor_UI[y][x];
+					frameBuffer[y + RestartT.y + 1][x + 55] = Cursor_UI[y][x];
 				}
 			}
 		}
@@ -1239,7 +1320,6 @@ void bullet_sprite(chara* player, object* bullets)
 				if (Bullet[y][x] != 0x00)
 				{
 					frameBuffer[y + bullets->position.y][x + bullets->position.x] = Bullet[y][x];
-					//frameBuffer[y + bullets->position.y + 7][x + bullets->position.x + 8] = Bullet[y][x];
 				}
 			}
 		}
@@ -1267,6 +1347,31 @@ void DisplayFPS()
 //-- UNUSED  FUNCTIONS --
 //Decided to keep it for reference
 //------------------------------------------------------------------------------------------------------------
+
+//Collision handler 
+bool collision(character* player, character* enemy, object* obj)
+{
+	//Collision detection for obstacles -- CURRENTLY NOT WORKING --
+	if (Map2[player->position.y / 14][player->position.x / 16] == 2 ||
+		Map2[player->position.y / 23][player->position.x / 13] == 0)
+	{
+		player->collided = 1;
+	}
+	else
+	{
+		player->collided = 0;
+	}
+
+	//Enemy collision with bullet -- CURRENTLY NOT WORKING --
+	if (bullets->position.x + bullets->move.x == enemy->position.x
+		|| bullets->position.y + bullets->move.y == enemy->position.y)
+	{
+		enemy->alive = 0;
+		killCount++;
+	}
+
+	return false;
+}
 
 //Timer count
 int CountTime()

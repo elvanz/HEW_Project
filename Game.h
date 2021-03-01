@@ -33,7 +33,6 @@ static Image imgFile;
 static FrameBuffer pFB;
 
 static int icon_anim;
-static int killCount;
 //-------------------------------------------------------------
 /* All functions goes here */
 extern void InitSound(int *);
@@ -48,9 +47,12 @@ extern void StartMenu();
 extern void Stage01();
 extern void GameOver();
 extern void Result();
+extern void InitEnemy();
+extern void UpdateEnemy(character *);
 extern void InitBullet();
 extern void SetBullet(int , int, int, int);
 extern void UpdateBullet();
+extern void BulletCollision();
 extern void KeyRead();
 extern void player_sprite(character* player, object* camera);
 extern void enemy_sprite(chara* enemy);
@@ -59,7 +61,6 @@ extern void bullet_sprite(chara* player, object*);
 extern void title_render();
 extern void gameOver_render();
 extern void Result_render();
-extern bool collision(chara*, chara*, object*);
 extern void AI_Behaviour(chara*, chara*);
 extern void DisplayFPS();
 
@@ -67,6 +68,7 @@ extern void DisplayFPS();
 
 //---------------------------------------------------------------
 //-- UNUSED --
+extern bool collision(chara*, chara*, object*);
 extern int CountTime();
 extern void load_sprite(object*, const char* _path);
 extern void load_image(PFRAMEBUFFER pFB, char *frameBuffer);

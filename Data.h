@@ -22,6 +22,7 @@
 #define FONT_HEIGHT	   10
 #define MAX_PIXELH	   64	//max rendered pixel height
 #define MAX_PIXELW	   64	//max rendered pixel width
+#define MAX_ENEMY	   50
 #define MAX_ANIM	   10
 #define NUM_KEY		  256
 
