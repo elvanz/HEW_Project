@@ -13,6 +13,7 @@
 #include "Renderer.h"
 #include <math.h>
 #include <time.h>
+#pragma warning (disable:6386)
 
 //Preprocessor
 #define APP_EXIT	0
@@ -37,6 +38,7 @@ static int icon_anim;
 /* All functions goes here */
 extern void InitSound(int *);
 extern void	InitWindow();
+extern void Tutorial();
 extern void MainGame();
 extern void Start();
 extern void Input(chara *);
@@ -58,6 +60,7 @@ extern void player_sprite(character* player, object* camera);
 extern void enemy_sprite(chara* enemy);
 extern void map_sprite();
 extern void bullet_sprite(chara* player, object*);
+extern void tutorial_render();
 extern void title_render();
 extern void gameOver_render();
 extern void Result_render();
@@ -67,15 +70,9 @@ extern void DisplayFPS();
 
 
 //---------------------------------------------------------------
-//-- UNUSED --
+//-- UNUSED (SAVED FOR FUTURE REFERENCE) -- 
 extern bool collision(chara*, chara*, object*);
 extern int CountTime();
-extern void load_sprite(object*, const char* _path);
-extern void load_image(PFRAMEBUFFER pFB, char *frameBuffer);
-extern void SwapBGR(PFRAMEBUFFER pFB);
-extern void SetWindowBMP(Image img, pImage pImg);
-extern void FileLoad(pImage img);
-extern void FileEnd(pImage img);
 //-------------------------------------------------------------
 
 #endif __GAME_H

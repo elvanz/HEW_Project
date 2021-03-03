@@ -67,9 +67,6 @@
     <Media Include="bgm\BGM02.mp3">
       <Filter>Resource Files\Sound</Filter>
     </Media>
-    <Media Include="bgm\Struggle.wav">
-      <Filter>Resource Files\Sound</Filter>
-    </Media>
     <Media Include="bgm\BGM.mp3">
       <Filter>Resource Files\Sound</Filter>
     </Media>

@@ -27,6 +27,7 @@ int selectCursor;
 int stage;
 int wave;
 int killCount;
+int posCount = 0;
 int KeyPush[NUM_KEY];
 int KeyEdge[NUM_KEY];
 //int icon_anim = 0;
@@ -49,12 +50,14 @@ const int frameDelay = 1000 / FPS;
 
 /* Sound settings */
 const char* BGM = "bgm\\BGM.mp3";
-const char* bgm01 = "bgm\\Struggle.wav";
+const char* bgm00 = "bgm\\Tutorial.mp3";
+const char* bgm01 = "bgm\\BGM02.mp3";
 const char* bgm02 = "bgm\\VICTORY.mp3";
 const char* bgm03 = "bgm\\GAMEOVER.wav";
 const char* bgm04 = "bgm\\Shoot.wav";
 const char* bgm05 = "bgm\\Squish.wav";
 int* bgm_id = MciOpenSound(BGM);
+int* bgm00_id = MciOpenSound(bgm00);
 int* bgm01_id = MciOpenSound(bgm01);
 int* bgm02_id = MciOpenSound(bgm02);
 int* bgm03_id = MciOpenSound(bgm03);
@@ -65,7 +68,7 @@ int* bgm05_id = MciOpenSound(bgm05);
 void InitSound(int *bgm)
 {
 	//Play sound
-	MciPlaySound(bgm, MCI_DEVTYPE_WAVEFORM_AUDIO);
+	MciPlaySound(bgm, MCI_DEVTYPE_CD_AUDIO);
 	MciSetVolume(bgm, 50);
 	//MciPlaySound(bgm02_id, MCI_DEVTYPE_CD_AUDIO);
 }
@@ -84,6 +87,15 @@ void InitWindow()
 
 	//Initialize double buffer
 	InitDoubleBuffer();
+}
+
+//Tutorial menu
+void Tutorial()
+{
+	//================================================================
+	//■Forwaring image data to frameBuffer & render
+	//================================================================
+	tutorial_render();
 }
 
 //For rendering startmenu
@@ -170,13 +182,14 @@ void KeyRead()
 void MainGame()
 {
 	//Load starting game data
-	//Set stage to stage01 for debugging
 	selectCursor = 0;
-	stage = stages::startmenu;
+	stage = stages::tutorial;
+	InitSound(bgm00_id);
+	MciSetVolume(bgm00_id, 10);
 
+	//Initialize game data
 	Start();
-	InitSound(bgm01_id);
-	//timer = CountTime();
+
 
 	//Set time
 	timeBeginPeriod(1);
@@ -258,14 +271,35 @@ void MainGame()
 
 			break;
 		}
-		case stages::bossStage:
+		case stages::tutorial:
 		{
-			//TODO List
+			//Read key input
+			KeyRead();
+			//Render tutorial
+			Render(&Tutorial);
+
+			//Go to the next stage
+			if (KeyEdge[VK_RETURN])
+			{
+				stage = stages::startmenu;
+				MciStopSound(bgm00_id);
+			}
+			if (KeyEdge[VK_ESCAPE])
+			{
+				gameRunning = false;
+			}
+
+			//Play sound for startmenu
+			//--Play it here so it wont be looped inside startmenu--
+			InitSound(bgm01_id);
+
 			break;
 		}
 		case stages::victory:
 		{
+			//Read key input
 			KeyRead();
+			//Render result screen
 			Render(&Result);
 
 			// -- SELECTION --
@@ -298,8 +332,9 @@ void MainGame()
 		}
 		case stages::defeat:
 		{
-			//InitSound(bgm03_id);
+			//Read key input
 			KeyRead();
+			//Render gameover screen
 			Render(&GameOver);
 
 			// -- SELECTION --
@@ -350,7 +385,7 @@ void Start()
 	player.moving = false;
 	player.attacking = false;
 	player.direction = FRONT;
-	player.HP = 5;
+	player.HP = 3;
 	wave = 1;
 
 	//Starting position set to center
@@ -543,11 +578,12 @@ void Update(chara *player, chara* enemy, object *camera)
 	UpdateBullet();
 	BulletCollision();
 
-	
+	//Debugging for timer use
 #ifdef _DEBUG
 	//timer -= 0.1f;
 #endif // _DEBUG
 	
+	//KillCount for each waves (10 waves in total)
 	if (killCount == 10)
 	{
 		wave = 2;
@@ -572,16 +608,43 @@ void Update(chara *player, chara* enemy, object *camera)
 		for (int i = 0; i < 10; i++)
 			enemy[i].alive = 1;
 	}
+	else if (killCount == 50)
+	{
+		wave = 6;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+	else if (killCount == 60)
+	{
+		wave = 7;
+		for (int i = 0; i < 10; i++)
+			enemy[i].alive = 1;
+	}
+	else if (killCount == 70)
+	{
+		wave = 8;
+		InitEnemy();
+	}
+	else if (killCount == 80)
+	{
+		wave = 9;
+		InitEnemy();
+	}
+	else if (killCount == 90)
+	{
+		wave = 10;
+		InitEnemy();
+	}
 
 	//Set kill count for result
-	if (wave == 5 && killCount >= 50)
+	if (wave == 10 && killCount >= 100)
 	{
 		MciStopSound(bgm_id);
 		stage = stages::victory;
 		InitSound(bgm02_id);
 	}
 
-	//collision(player, enemy, &solidObject);
+	//Game over;
 	if (player->HP <= 0)
 	{
 		MciStopSound(bgm_id);
@@ -823,6 +886,7 @@ void player_sprite(character* player, object* camera)
 	{
 		for (int x = 0; x < 16; x++)
 		{
+			//Character sprite facing front
 			if (player->direction == FRONT)
 			{
 				if (Player_MOVINGFRONT[player->anim][y][x] != 0x00)
@@ -832,11 +896,11 @@ void player_sprite(character* player, object* camera)
 						if (Player_ATTACKINGFRONT[y][x] != 0x00)
 							frameBuffer[y + player->position.y][x + player->position.x] = Player_ATTACKINGFRONT[y][x];
 					}
-					//Character sprite facing front
 					else
 						frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGFRONT[player->anim][y][x];
 				}
 			}
+			//Character sprite facing left
 			else if (player->direction == LEFT)
 			{
 				if (Player_MOVINGSIDE[player->anim][y][x] != 0x00)
@@ -850,6 +914,7 @@ void player_sprite(character* player, object* camera)
 						frameBuffer[y + player->position.y][x + player->position.x] = Player_MOVINGSIDE[player->anim][y][x];
 				}
 			}
+			//Character sprite facing right
 			else if (player->direction == RIGHT)
 			{
 				if (Player_MOVINGSIDE[player->anim][y][x] != 0x00)
@@ -863,6 +928,7 @@ void player_sprite(character* player, object* camera)
 						frameBuffer[y + player->position.y][16 - x + player->position.x] = Player_MOVINGSIDE[player->anim][y][x];
 				}
 			}
+			//Character sprite facing backward
 			else if (player->direction == BACK)
 			{
 				if (Player_MOVINGBACK[player->anim][y][x] != 0x00)
@@ -888,17 +954,10 @@ void player_sprite(character* player, object* camera)
 	//CAN YOU SURVIVE Text
 	char string[64]{ 0 };
 	char string2[64]{ 0 };
-	strcpy(&string2[0], "MOVE");
-	if (wave == 1)
-		strcpy(&string[0], "WAVE 1");
-	else if (wave == 2)
-		strcpy(&string[0], "WAVE 2");
-	else if (wave == 3)
-		strcpy(&string[0], "WAVE 3");
-	else if (wave == 4)
-		strcpy(&string[0], "WAVE 4");
-	else if (wave == 5)
-		strcpy(&string[0], "WAVE 5");
+	sprintf(&string[0], "WAVE %d", wave);
+	if (wave < 7)
+		strcpy(&string2[0], "EASY");
+	else strcpy(&string2[0], "HARD");
 
 	//ASCII Render
 	for (int y = 0; y < 8; y++)
@@ -925,17 +984,17 @@ void player_sprite(character* player, object* camera)
 				//To fix C6011 Deferencing NULL ptr
 				if (ascii != nullptr && *ascii)
 				{
-					//-- 213 is the y position  & 82 is the x position 
+					//-- 212 is the y position  & 82 is the x position 
 					if (*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x) != 0x00)
 					{
-						*((*frameBuffer) + (((y + 213) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 82 + i * 7) % SCREEN_WIDTH) =
+						*((*frameBuffer) + (((y + 212) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 82 + i * 7) % SCREEN_WIDTH) =
 							*(*(*ascii) + ((string[i] - 0x30) * 8 * 8) + (y * 8) + x);
 					}
 
-					//-- 213 is the y position  & 82 is the x position 
+					//-- 212 is the y position  & 152 is the x position 
 					if (*(*(*ascii) + ((string2[i] - 0x30) * 8 * 8) + (y * 8) + x) != 0x00)
 					{
-						*((*frameBuffer) + (((y + 213) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 152 + i * 7) % SCREEN_WIDTH) =
+						*((*frameBuffer) + (((y + 212) % SCREEN_HEIGHT) * SCREEN_WIDTH) + (x + 152 + i * 7) % SCREEN_WIDTH) =
 							*(*(*ascii) + ((string2[i] - 0x30) * 8 * 8) + (y * 8) + x);
 					}
 				}
@@ -1049,6 +1108,65 @@ void enemy_sprite(chara* enemy)
 				else
 					frameBuffer[y + enemy->position.y][11 - x + enemy->position.x] = Enemy_MOVING[enemy->anim][y][x];
 			}
+		}
+	}
+}
+
+//Tutorial render
+void tutorial_render()
+{
+	//creating effect for press enter text
+	posCount++;
+
+	//Clamp animation
+	if (posCount > 200)
+		posCount = 0;
+
+	//Background
+	for (int y = 0; y < SCREEN_HEIGHT; y++)
+	{
+		for (int x = 0; x < SCREEN_WIDTH; x++)
+		{
+			frameBuffer[y][x] = 0x05;
+		}
+	}
+
+	//How to play text
+	for (int y = 0; y < 14; y++)
+	{
+		for (int x = 0; x < 144; x++)
+		{
+			if (HowToPlay[y][x] != 0x05)
+				frameBuffer[y + 40][x + 31] = HowToPlay[y][x];
+		}
+	}
+
+	//Keymapping
+	for (int y = 0; y < 30; y++)
+	{
+		for (int x = 0; x < 72; x++)
+		{
+			frameBuffer[y + 90][x + 63] = KeyMap[y][x];
+		}
+	}
+
+	//Keymapping border
+	for (int y = 0; y < 34; y++)
+	{
+		for (int x = 0; x < 76; x++)
+		{
+			if (KeyMapBorder[y][x] != 0x05)
+				frameBuffer[y + 88][x + 61] = KeyMapBorder[y][x];
+		}
+	}
+
+	//Press enter text
+	for (int y = 0; y < 26; y++)
+	{
+		for (int x = 0; x < 128; x++)
+		{
+			if (PressEnter[y][x] != 0x05)
+				frameBuffer[y + 150][x + posCount] = PressEnter[y][x];
 		}
 	}
 }
@@ -1345,9 +1463,8 @@ void DisplayFPS()
 
 //------------------------------------------------------------------------------------------------------------
 //-- UNUSED  FUNCTIONS --
-//Decided to keep it for reference
+//Decided to keep it for future reference
 //------------------------------------------------------------------------------------------------------------
-
 //Collision handler 
 bool collision(character* player, character* enemy, object* obj)
 {
@@ -1401,108 +1518,7 @@ int CountTime()
 
 	return minutes;
 }
-/**
-* @brief	スプライトをオブジェクトに読み込む
-*
-* @param	sprite_path->sprite file name;
-*			pointer to object structure
-*/
-void load_sprite(object* obj, const char* _path)
-{
-	//Pass parameter to path value
-	obj->path = _path;
 
-	//Initialize FILE struct for image rendering
-	FILE* image;
+//end of file ---
+/////////////////
 
-	//Opening file 
-	image = fopen(obj->path, "rb");
-
-	//Acquite sprite attributes
-	fseek(image, 18, SEEK_SET);
-	fread(&(obj->imageWidth), 4, 2, image);
-
-	//Acquire sprite data
-	fseek(image, 118, SEEK_SET);
-	for (int y = obj->imageHeight - 1; y >= 0; y--)
-	{
-		for (int x = 0; x < obj->imageWidth; x++)
-		{
-			char pixels;
-			fread(&pixels, 1, 1, image);
-			obj->sprite[y][x] = (pixels & 240) >> 4;
-			obj->sprite[y][++x] = pixels & 15;
-		}
-	}
-
-	//Close image file
-	fclose(image);
-	return;
-}
-
-//Load BMP for stage01
-void load_image(PFRAMEBUFFER pFB, char* frameBuffer)
-{
-	//Initialize Console I/O
-	InitConio(pFB->width, pFB->height);
-
-	//Initialize 4 bit bmp
-	if (pFB->bih.biBitCount == 4)
-	{
-		GetConsolePalette();
-		CopyPalette(pFB->ppal);
-		SetConsolePalette();
-	}
-	FixWin();
-
-	ClearFrameBufferFull(frameBuffer);
-	memcpy(frameBuffer, pFB->ppx, pFB->ppx_size);
-
-	//-------------------------------------------
-	//Render
-	if (pFB->bih.biBitCount == 4)
-		PrintFrameBuffer(frameBuffer);
-	else if (pFB->bih.biBitCount == 24)
-		PrintImage((PBYTE)frameBuffer);
-
-	FlipScreen();
-}
-
-
-//Swap RGB to BGR for 24bpp bitmap
-void SwapBGR(PFRAMEBUFFER pFB)
-{
-	if (pFB->bih.biBitCount == 24)
-		bmp_swapRB(pFB);
-}
-
-//SetWindow for BMP
-void SetWindowBMP(Image img, pImage pImg)
-{
-	pImg->frameBuffer = (char*)calloc(img.pFB0->ppx_size, sizeof(BYTE));
-	InitConio(img.pFB0->width, img.pFB0->height);
-
-	SetScreenFontSize(FONT_WIDTH, FONT_HEIGHT);
-}
-
-//Load file
-void FileLoad(pImage img)
-{
-	if (!(img->pFB0 = bmp_load("bmp\\title.bmp")))
-		return;
-
-	//Swap RGB to BGR if bmp file is 24bpp
-	SwapBGR(img->pFB0);
-}
-
-//end file
-void FileEnd(pImage img)
-{
-	//End bmp for title
-	bmp_end(img->pFB0);
-
-	//bmp_end(img->pFB1);
-}
-
-///end of file
-///-----------------------------------------------------------------

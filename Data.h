@@ -39,7 +39,7 @@ enum stages
 {
 	startmenu,
 	stage01,
-	bossStage,
+	tutorial,
 	victory,
 	defeat
 };
