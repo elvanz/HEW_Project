@@ -170,7 +170,9 @@
   <ItemGroup>
     <Media Include="bgm\BGM.mp3" />
     <Media Include="bgm\BGM02.mp3" />
+    <Media Include="bgm\Enter.mp3" />
     <Media Include="bgm\GAMEOVER.wav" />
+    <Media Include="bgm\Select.mp3" />
     <Media Include="bgm\Shoot.wav" />
     <Media Include="bgm\Squish.wav" />
     <Media Include="bgm\VICTORY.mp3" />

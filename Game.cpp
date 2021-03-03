@@ -56,6 +56,8 @@ const char* bgm02 = "bgm\\VICTORY.mp3";
 const char* bgm03 = "bgm\\GAMEOVER.wav";
 const char* bgm04 = "bgm\\Shoot.wav";
 const char* bgm05 = "bgm\\Squish.wav";
+const char* bgm06 = "bgm\\Select.mp3";
+const char* bgm07 = "bgm\\Enter.wav";
 int* bgm_id = MciOpenSound(BGM);
 int* bgm00_id = MciOpenSound(bgm00);
 int* bgm01_id = MciOpenSound(bgm01);
@@ -63,12 +65,14 @@ int* bgm02_id = MciOpenSound(bgm02);
 int* bgm03_id = MciOpenSound(bgm03);
 int* bgm04_id = MciOpenSound(bgm04);
 int* bgm05_id = MciOpenSound(bgm05);
+int* bgm06_id = MciOpenSound(bgm06);
+int* bgm07_id = MciOpenSound(bgm07);
 
 //Initialize Sound
 void InitSound(int *bgm)
 {
 	//Play sound
-	MciPlaySound(bgm, MCI_DEVTYPE_CD_AUDIO);
+	MciPlaySound(bgm, 0);
 	MciSetVolume(bgm, 50);
 	//MciPlaySound(bgm02_id, MCI_DEVTYPE_CD_AUDIO);
 }
@@ -212,11 +216,14 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
+				InitSound(bgm06_id);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
+				InitSound(bgm06_id);
 				selectCursor++;
+				//MciStopSound(bgm06_id);
 			}
 			if (selectCursor < 0)
 				selectCursor = 0;
@@ -224,15 +231,19 @@ void MainGame()
 				selectCursor = 1;
 
 			if (KeyEdge[VK_RETURN])
-			{
+			{	
 				if (selectCursor == 0)
 				{
+					InitSound(bgm07_id);
 					stage = stages::stage01;
 					MciStopSound(bgm01_id);
 					InitSound(bgm_id);
 				}
 				else if (selectCursor == 1)
+				{
+					InitSound(bgm07_id);
 					gameRunning = false;
+				}
 			}
 			MciUpdateSound(bgm01_id);
 			break;
@@ -281,6 +292,7 @@ void MainGame()
 			//Go to the next stage
 			if (KeyEdge[VK_RETURN])
 			{
+				InitSound(bgm07_id);
 				stage = stages::startmenu;
 				MciStopSound(bgm00_id);
 			}
@@ -305,10 +317,12 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
+				InitSound(bgm06_id);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
+				InitSound(bgm06_id);
 				selectCursor++;
 			}
 			if (selectCursor < 0)
@@ -318,6 +332,7 @@ void MainGame()
 
 			if (KeyEdge[VK_RETURN])
 			{
+				InitSound(bgm07_id);
 				if (selectCursor == 0)
 				{
 					Start();
@@ -340,10 +355,12 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
+				InitSound(bgm06_id);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
+				InitSound(bgm06_id);
 				selectCursor++;
 			}
 			if (selectCursor < 0)
@@ -353,6 +370,7 @@ void MainGame()
 
 			if (KeyEdge[VK_RETURN])
 			{
+				InitSound(bgm07_id);
 				if (selectCursor == 0)
 				{
 					Start();

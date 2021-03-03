@@ -82,6 +82,12 @@
     <Media Include="bgm\VICTORY.mp3">
       <Filter>Resource Files\Sound</Filter>
     </Media>
+    <Media Include="bgm\Enter.mp3">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
+    <Media Include="bgm\Select.mp3">
+      <Filter>Resource Files\Sound</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Image Include="bmp\title.bmp">
