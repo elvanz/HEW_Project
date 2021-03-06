@@ -5,8 +5,8 @@
 */
 #pragma once
 
-#ifndef __DATA_H
-#define __DATA_H
+#ifndef DATA_H
+#define DATA_H
 
 //Include
 #include "GraphicDataManager.h"
@@ -120,5 +120,5 @@ typedef struct
 //------------------------------------------------------------------------------------------------
 
 
-#endif __DATA_H
+#endif DATA_H
 

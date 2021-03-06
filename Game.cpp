@@ -27,6 +27,7 @@ int selectCursor;
 int stage;
 int wave;
 int killCount;
+int icon_anim = 0;
 int posCount = 0;
 int KeyPush[NUM_KEY];
 int KeyEdge[NUM_KEY];
@@ -40,36 +41,17 @@ Point QuitT{ 83, 140 };
 
 /* Framerate settings*/
 float timer{ 0.0f };
-int frame;
-int FPSCount;
-int execLastTime;
-int currentTime;
-int fpsLastTime;
+int frame = 0;
+int FPSCount = 0;
+int execLastTime = 0;
+int currentTime = 0;
+int fpsLastTime = 0;
 const int FPS = 60;
 const int frameDelay = 1000 / FPS;
 
-/* Sound settings */
-const char* BGM = "bgm\\BGM.mp3";
-const char* bgm00 = "bgm\\Tutorial.mp3";
-const char* bgm01 = "bgm\\BGM02.mp3";
-const char* bgm02 = "bgm\\VICTORY.mp3";
-const char* bgm03 = "bgm\\GAMEOVER.wav";
-const char* bgm04 = "bgm\\Shoot.wav";
-const char* bgm05 = "bgm\\Squish.wav";
-const char* bgm06 = "bgm\\Select.mp3";
-const char* bgm07 = "bgm\\Enter.wav";
-int* bgm_id = MciOpenSound(BGM);
-int* bgm00_id = MciOpenSound(bgm00);
-int* bgm01_id = MciOpenSound(bgm01);
-int* bgm02_id = MciOpenSound(bgm02);
-int* bgm03_id = MciOpenSound(bgm03);
-int* bgm04_id = MciOpenSound(bgm04);
-int* bgm05_id = MciOpenSound(bgm05);
-int* bgm06_id = MciOpenSound(bgm06);
-int* bgm07_id = MciOpenSound(bgm07);
 
 //Initialize Sound
-void InitSound(int *bgm)
+void SoundPlay(int *bgm)
 {
 	//Play sound
 	MciPlaySound(bgm, 0);
@@ -185,11 +167,10 @@ void KeyRead()
 //Game loop goes here
 void MainGame()
 {
-	//Load starting game data
 	selectCursor = 0;
 	stage = stages::tutorial;
-	InitSound(bgm00_id);
-	MciSetVolume(bgm00_id, 10);
+	SoundPlay(bgm_id[BGMNUM::TUTORIAL]);
+	MciSetVolume(bgm_id[BGMNUM::TUTORIAL], 10);
 
 	//Initialize game data
 	Start();
@@ -216,12 +197,12 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor++;
 				//MciStopSound(bgm06_id);
 			}
@@ -234,18 +215,22 @@ void MainGame()
 			{	
 				if (selectCursor == 0)
 				{
-					InitSound(bgm07_id);
+					SoundPlay(sfx_id[SFXNUM::ENTER]);
 					stage = stages::stage01;
-					MciStopSound(bgm01_id);
-					InitSound(bgm_id);
+					MciStopSound(bgm_id[BGMNUM::TITLE]);
+					SoundPlay(bgm_id[BGMNUM::MAIN]);
 				}
 				else if (selectCursor == 1)
 				{
-					InitSound(bgm07_id);
+					SoundPlay(sfx_id[SFXNUM::ENTER]);
 					gameRunning = false;
 				}
 			}
-			MciUpdateSound(bgm01_id);
+#ifdef _DEBUG
+			DisplayFPS();
+#endif // _DEBUG
+
+			MciUpdateSound(bgm_id[BGMNUM::TITLE]);
 			break;
 		}
 		case stages::stage01:
@@ -274,7 +259,7 @@ void MainGame()
 			frame++;
 
 			//Update Sound
-			MciUpdateSound(bgm_id);
+			MciUpdateSound(bgm_id[BGMNUM::MAIN]);
 
 #ifdef _DEBUG
 			DisplayFPS();
@@ -292,9 +277,9 @@ void MainGame()
 			//Go to the next stage
 			if (KeyEdge[VK_RETURN])
 			{
-				InitSound(bgm07_id);
+				SoundPlay(sfx_id[SFXNUM::ENTER]);
 				stage = stages::startmenu;
-				MciStopSound(bgm00_id);
+				MciStopSound(bgm_id[BGMNUM::TUTORIAL]);
 			}
 			if (KeyEdge[VK_ESCAPE])
 			{
@@ -303,7 +288,7 @@ void MainGame()
 
 			//Play sound for startmenu
 			//--Play it here so it wont be looped inside startmenu--
-			InitSound(bgm01_id);
+			SoundPlay(bgm_id[BGMNUM::TITLE]);
 
 			break;
 		}
@@ -317,12 +302,12 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor++;
 			}
 			if (selectCursor < 0)
@@ -332,17 +317,21 @@ void MainGame()
 
 			if (KeyEdge[VK_RETURN])
 			{
-				InitSound(bgm07_id);
+				SoundPlay(sfx_id[SFXNUM::ENTER]);
 				if (selectCursor == 0)
 				{
 					Start();
-					MciStopSound(bgm02_id);
-					InitSound(bgm_id);
+					MciStopSound(sfx_id[SFXNUM::VICTORY]);
+					SoundPlay(bgm_id[BGMNUM::MAIN]);
 					stage = stages::stage01;
 				}
 				else if (selectCursor == 1)
 					gameRunning = false;
 			}
+#ifdef _DEBUG
+			DisplayFPS();
+#endif // _DEBUG
+
 			break;
 		}
 		case stages::defeat:
@@ -355,12 +344,12 @@ void MainGame()
 			// -- SELECTION --
 			if (KeyEdge[VK_UP])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor--;
 			}
 			else if (KeyEdge[VK_DOWN])
 			{
-				InitSound(bgm06_id);
+				SoundPlay(sfx_id[SFXNUM::SELECT]);
 				selectCursor++;
 			}
 			if (selectCursor < 0)
@@ -370,17 +359,22 @@ void MainGame()
 
 			if (KeyEdge[VK_RETURN])
 			{
-				InitSound(bgm07_id);
+				SoundPlay(sfx_id[SFXNUM::ENTER]);
 				if (selectCursor == 0)
 				{
 					Start();
-					MciStopSound(bgm03_id);
-					InitSound(bgm_id);
+					MciStopSound(sfx_id[SFXNUM::GAMEOVER]);
+					SoundPlay(bgm_id[BGMNUM::MAIN]);
 					stage = stages::stage01;
 				}
 				else if (selectCursor == 1)
 					gameRunning = false;
 			}
+
+#ifdef _DEBUG
+			DisplayFPS();
+#endif // _DEBUG
+
 			break;
 		}
 		default:
@@ -492,7 +486,7 @@ void Input(chara* player)
 			SetBullet(player->center.x + 2, player->position.y, 0, -3);
 			player->attacking = true;
 			player->direction = BACK;
-			InitSound(bgm04_id);
+			SoundPlay(sfx_id[SFXNUM::SHOOT]);
 		}
 	}
 	else if (KeyEdge[VK_DOWN])
@@ -502,7 +496,7 @@ void Input(chara* player)
 			SetBullet(player->center.x + 2, player->center.y + 2, 0, 3);
 			player->attacking = true;
 			player->direction = FRONT;
-			InitSound(bgm04_id);
+			SoundPlay(sfx_id[SFXNUM::SHOOT]);
 		}
 	}
 	else if (KeyEdge[VK_LEFT])
@@ -512,7 +506,7 @@ void Input(chara* player)
 			SetBullet(player->center.x + 2, player->center.y, -3, 0);
 			player->attacking = true;
 			player->direction = LEFT;
-			InitSound(bgm04_id);
+			SoundPlay(sfx_id[SFXNUM::SHOOT]);
 		}
 	}
 	else if (KeyEdge[VK_RIGHT])
@@ -522,7 +516,7 @@ void Input(chara* player)
 			SetBullet(player->center.x + 2, player->center.y, 3, 0);
 			player->attacking = true;
 			player->direction = RIGHT;
-			InitSound(bgm04_id);
+			SoundPlay(sfx_id[SFXNUM::SHOOT]);
 		}
 	}
 	else
@@ -639,7 +633,7 @@ void Update(chara *player, chara* enemy, object *camera)
 			enemy[i].alive = 1;
 	}
 	else if (killCount == 70)
-	{
+	{	
 		wave = 8;
 		InitEnemy();
 	}
@@ -657,17 +651,17 @@ void Update(chara *player, chara* enemy, object *camera)
 	//Set kill count for result
 	if (wave == 10 && killCount >= 100)
 	{
-		MciStopSound(bgm_id);
+		MciStopSound(bgm_id[BGMNUM::MAIN]);
 		stage = stages::victory;
-		InitSound(bgm02_id);
+		SoundPlay(sfx_id[SFXNUM::VICTORY]);
 	}
 
 	//Game over;
 	if (player->HP <= 0)
 	{
-		MciStopSound(bgm_id);
+		MciStopSound(bgm_id[BGMNUM::MAIN]);
 		stage = stages::defeat;
-		InitSound(bgm03_id);
+		SoundPlay(sfx_id[SFXNUM::GAMEOVER]);
 	}
 }
 
@@ -731,7 +725,7 @@ void UpdateEnemy(character* player)
 			//Collision detection
 			if (distance_x[i] < distance_x2[i] && distance_y[i] < distance_y2[i])
 			{
-				InitSound(bgm05_id);
+				SoundPlay(sfx_id[SFXNUM::PLAYERHIT]);
 				player->HP--;
 				if (player->direction == LEFT)
 					player->position.x += 5;
@@ -750,9 +744,6 @@ void UpdateEnemy(character* player)
 //Render passed function as game data for rendering
 void Render(void (*func)())
 {
-	//Set for framerate
-	//int t = timeGetTime();
-
 	//Clearing frameBuffer space for rendering
 	ClearFrameBuffer(frameBuffer[0]);
 
@@ -769,13 +760,6 @@ void Render(void (*func)())
 
 	//Flip screen to the second buffer
 	FlipScreen();
-
-	//Set framerate
-	//int w = frameDelay - (timeGetTime() - t);
-	//if (w > 0) {
-	//	Sleep(w);
-	//}
-	//frame++;
 }
 
 //Initialize bullet
@@ -870,10 +854,12 @@ void BulletCollision()
 					if (distance_x[y] < distance_x2[y] && distance_y[y] < distance_y2[y])
 					{
 						hit_flag = 1;
+						SoundPlay(sfx_id[SFXNUM::MONSTERHIT]);
 					}
 					else
 					{
 						hit_flag = 0;
+						//MciStopSound(HitSound_id);
 					}
 
 					if (hit_flag == 1)
@@ -888,13 +874,6 @@ void BulletCollision()
 		}
 	}
 }
-
-//Free memory
-void FreeMemory()
-{
-	//TODO
-}
-
 
 //Player sprite rendering with GUI HUD
 void player_sprite(character* player, object* camera)
@@ -1535,6 +1514,12 @@ int CountTime()
 	}
 
 	return minutes;
+}
+
+//Free memory
+void FreeMemory()
+{
+	//TODO
 }
 
 //end of file ---

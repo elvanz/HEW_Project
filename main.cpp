@@ -26,13 +26,14 @@ int main(void)
 	//================================================================
 	//Initialize Game & Generate Window
 	InitWindow();
-	//InitDoubleBuffer();
 
 	//Game Event Handlers 
+	InitializeSound();
 	MainGame();
 
 	//free memory
-	FreeMemory();
+	CloseSound();
+	//FreeMemory();
 
 	return APP_EXIT;
 }	//main

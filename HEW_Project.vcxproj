@@ -157,6 +157,7 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Sound.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BmpChar.h" />
@@ -166,6 +167,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="GraphicDataManager.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Sound.h" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="bgm\BGM.mp3" />

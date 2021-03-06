@@ -5,15 +5,17 @@
 * Header file for game event handlers
 */
 
-#ifndef __GAME_H
-#define __GAME_H
+#ifndef GAME_H
+#define GAME_H
 
 /* Include data header file */
 #include "Data.h"
-#include "Renderer.h"
+//#include "Renderer.h"
+#include "Sound.h"
 #include <math.h>
 #include <time.h>
 #pragma warning (disable:6386)
+#pragma warning (disable:6385)
 
 //Preprocessor
 #define APP_EXIT	0
@@ -33,10 +35,19 @@ static Texts Title;
 static Image imgFile;
 static FrameBuffer pFB;
 
-static int icon_anim;
+extern int icon_anim;
+extern float timer;
+extern int frame;
+extern int FPSCount;
+extern int execLastTime;
+extern int currentTime;
+extern int fpsLastTime;
+extern const int FPS;
+extern const int frameDelay;
+
 //-------------------------------------------------------------
 /* All functions goes here */
-extern void InitSound(int *);
+extern void SoundPlay(int *bgm);
 extern void	InitWindow();
 extern void Tutorial();
 extern void MainGame();
@@ -75,4 +86,4 @@ extern bool collision(chara*, chara*, object*);
 extern int CountTime();
 //-------------------------------------------------------------
 
-#endif __GAME_H
+#endif GAME_H
